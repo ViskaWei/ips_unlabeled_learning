@@ -1,0 +1,38 @@
+# MVP-1.0: 1D 简单系统验证
+# 验证 trajectory-free loss 在简单系统上的有效性
+
+_base_: "base.yaml"
+
+mvp: "1.0"
+exp_id_prefix: "IPS-mvp1_0"
+stage: "explore"  # explore | converge
+
+# Override data settings
+data:
+  d: 1
+  N: 10
+  M: 200
+  L: 20
+
+# Override potentials
+potentials:
+  V:
+    type: "harmonic"
+    k: 1.0
+  Phi:
+    type: "gaussian"
+    scale: 1.0
+
+# Override training for exploration
+training:
+  epochs: 30
+  lr: 1e-4
+
+# Output directory
+output:
+  base_dir: "results/mvp1_0"
+
+# Exploration phase: no wandb
+logging:
+  wandb:
+    enabled: false

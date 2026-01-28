@@ -1,0 +1,42 @@
+# MVP-1.1: NN 架构对比
+# 对比 MLP vs ResNet vs Fourier Features
+
+_base_: "base.yaml"
+
+mvp: "1.1"
+exp_id_prefix: "IPS-mvp1_1"
+stage: "explore"
+
+# Same data as MVP-1.0
+data:
+  d: 1
+  N: 10
+  M: 200
+  L: 20
+
+# Test different architectures
+# Run this config 3 times with different model settings
+model:
+  # Option A: MLP (default)
+  type: "mlp"
+  hidden_dims: [64, 64]
+
+  # Option B: Deeper MLP
+  # type: "mlp"
+  # hidden_dims: [128, 128, 64]
+
+  # Option C: ResNet
+  # type: "resnet"
+  # hidden_dims: [64, 64]
+  # num_blocks: 2
+
+training:
+  epochs: 30
+  lr: 1e-4
+
+output:
+  base_dir: "results/mvp1_1"
+
+logging:
+  wandb:
+    enabled: false

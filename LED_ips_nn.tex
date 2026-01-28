@@ -1,0 +1,246 @@
+
+\documentclass[12pt]{article}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   packages    %%%%%%%%%
+\usepackage[small,compact]{titlesec}
+\usepackage{amsmath,amssymb,amsfonts,mathabx,setspace,bm} %% bm for using \bm{rho} to get bold symbols; 
+\usepackage{graphicx,caption,epsfig,subfigure,epsfig,wrapfig}
+\usepackage{url,color,verbatim,algorithmic}
+\usepackage[sort,compress]{cite}
+\usepackage[ruled,boxed]{algorithm}
+\usepackage[scaled]{helvet}
+\usepackage[T1]{fontenc}
+\usepackage[bookmarks=true, bookmarksnumbered=true, colorlinks=true,   pdfstartview=FitV,
+linkcolor=blue, citecolor=blue, urlcolor=blue]{hyperref}
+
+%%%%%%%%%%%----   page settings   ----- %%%%%%%%%
+\marginparwidth 0pt
+\oddsidemargin  -0.15in   % = 0.38 cm
+\evensidemargin  -0.15in % = 0.38 cm
+\marginparsep 0pt
+\topmargin   -.55in   % = 1.40 cm
+\textwidth   6.8in      % = 17.27 cm
+\textheight  9.3in      % = 23.87 cm
+%\footskip 3mm
+%\setstretch{1.05}  \hoffset=-0.1in  \voffset= -0.8in
+\parskip=0.0in
+
+
+%%%%%%%%%%%----  new commands/defs   ----- %%%%%%%%%
+\def\clattice{c_{\mathrm{lat}}}           
+\def\Rn{\mathbb{R}^n}
+\def\R{\mathbb{R}}                            
+\def\P{\mathbb{P}}
+\def\bbeta{\bm \beta}                        
+\newcommand{\E}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\rbracket}[1]{\left(#1\right)}
+\newcommand{\sbracket}[1]{\left[#1\right]}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\normv}[1]{\left| #1\right|}
+\newcommand{\innerp}[1]{\langle{#1}\rangle}
+\newcommand{\dbinnerp}[1]{\langle\langle{#1}\rangle\rangle}
+\newcommand{\vect}[1] {\pmb{#1}}
+\newcommand{\mat}[1]{\pmb{#1}}
+\newcommand{\floor}[1]{\lfloor{#1}\rfloor}
+
+
+\def\calE{\mathcal{E}}
+\def\bX{\mathbf{X}}    \def\bx{\mathbf{x}}    
+\def\barX{\overline{X}}
+\def\bW{\mathbf{W}}    \def\bw{\mathbf{w}}  
+
+
+\newcommand{\Ito}{It\^o}
+
+%% Note commands
+% \usepackage{soul,array}
+%% margin notes
+%\newcommand{\note}[1]{\marginpar{\renewcommand{\baselinestretch}{1.0}{\scriptsize{\parbox{0.5in}{\raggedright{\bf{\sffamily #1}}}}}}}
+%\newcommand{\fnote}[1]{\note{Fei: {#1}}}
+%\newcommand{\frem}[1]{{\textcolor{cyan}{[Fei: {#1}]}}}
+%\newcommand{\fnew}[1]{{\textcolor{blue}{#1}}}
+%\newcommand{\fpar}[1]{\bigskip\noindent{\em {#1}}}
+\newcommand{\frmk}[1]{{\textcolor{cyan}{[Remark: {#1}]}}}
+\newcommand{\fqes}[1]{{\textcolor{red}{[{\bf Question:} {#1}]}}}
+\newcommand{\blue}[1]{{\color{blue}{#1}}}
+\newcommand{\red}[1]{{\color{red}{#1}}}
+\newcommand{\gray}[1]{{\color{gray}{#1} } } 
+\definecolor{dgreen}{RGB}{0,153,76}
+\newcommand{\dgreen}[1]{{\color{dgreen}{#1}}} 
+
+
+\newcommand{\FL}[1]{{\color{cyan}{#1}}}
+
+%%%%%%%%%%%---- new environments  
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+% \newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{remark}[theorem]{Remark}
+\newenvironment{proof}[1][Proof]{\noindent\textbf{#1.} }{\ \rule{0.5em}{0.5em}}
+% \import{/Users/feilu/Documents/ref_Fei17_11}
+
+
+
+%%%%% ================= begin document ====== 
+\begin{document}
+%%% ============== Title  =======
+\begin{center}
+\textbf{\Large Learning from unlabeled data for interacting particle system} \\[0pt]
+\vspace{4mm} Fei Lu\\
+ feilu@math.jhu.edu \\
+Last updated:  2026-1-27
+% Intial idea: 2024-10
+\end{center}
+ 
+% \title{Reduction using local average and rescaling}
+% \author{}  \maketitle
+
+
+\begin{abstract}
+Learning the dynamics of complex high-dimensional interacting particle systems is a fundamental task across various scientific disciplines. However, a common challenge in these applications is the unlabeled ensemble data collected at discrete time points, which lack trajectory information due to limitations in data-collection methods or privacy concerns. We overcome the challenge by using weak-form PDEs to construct trajectory-free loss functions. We employ an automatic reproducing kernel derived from the data and model to estimate the interaction potential, ensuring an RKHS tailored to the inverse problem.
+ \end{abstract}
+
+
+% \tableofcontents
+
+\section{Learning a single system from ensemble data}
+Consider the estimation of the interaction potential $\Phi$ and kinetic potential $V$ in the interacting particle system of $N$ particles with $W_t^i \in \R^d$ a standard Brownian motion: 
+\begin{equation}\label{eq:opt_model_R} 
+\smash{
+	d X_t^i = \FL{-}\frac{1}{N} \sum_{i\neq j = 1}^N \nabla \Phi(X_t^i-X_t^j) dt
+	%\nolimits_{j\neq i} \phi(|X_i-X_j|) \frac{X_i-X_j}{|X_i-X_j|}dt 
+	+\nabla V(X_t^i) dt + \sigma dW_t^i, \quad i= 1,\ldots\, N\,, \quad t\in [0,T]
+    }
+\end{equation} 
+from \emph{unlabeled data} consisting of a sequence of sample ensembles denoted by
+\begin{equation}\label{eq:data_ensemble}
+	\mathcal{D} = \{\bX_{t_\ell}^{1:M_\ell}\}_{\ell=1}^{L} \text{ with } \bX_t = (X_t^1,\ldots, X_t^N), \quad \quad M_\ell\geq M, \quad \ell=1,\ldots,L. 
+\end{equation}
+Here $\{t_\ell\}_{\ell=1}^L\subset [0,T]$ are time points, and $M_\ell$ is the number of samples at $t_{\ell}$ and may vary in $\ell$. In particular, the data misses trajectory information in the sense that the positions $X_{t_\ell}^{i,m}$ and $X_{t_{\ell+1}}^{i,m}$ are not paired in data either since the label is unknown or they may come from different trajectories. Such types of data arise in various applications, such as opinion polls \cite{acemoglu2011opinion,MT14,tang2019_LearningOpinions,sharrock2021_ParameterEstimation}, gene methylation \cite{jenkinson2017potential,agha2019blood,bjornsson2008intra,razin1991dna}, and neuroscience \cite{seroussi2018spectral2, seroussi2020localization,delarue2015particle}, to name just a few. 
+
+The major challenge comes from the \textbf{missing trajectory information}. It prevents the applications of methods that use the derivatives $d X_t^i/d t$ or their approximation, such as the widely used methods based on minimizing the mean-square prediction error, the likelihood of the trajectories, or the posterior in Bayesian methods  \cite{Kut04,DS04,Iac09,Jen14,LMT21_JMLR,LZTM19pnas,LMT21,kasonga1990_MaximumLikelihooda,liu2020_ParameterEstimation,amorino2023parameter,huang2019learning}. In particular, the number $N$ is often too small to use the mean-field equation for the inference (or the Fokker-Planck equation for estimating $V$ when $\Phi\equiv 0$) \cite{chen2021_MaximumLikelihooda,LangLu22,wen2016_MaximumLikelihood,messenger2022learning}. We overcome the challenge by constructing a trajectory-free loss function using weak-form PDEs. Based on this, we infer the potential functions by a novel automatic kernel regression method, and build a systematic theory on identifiability and minimax rates. 
+
+\section{Trajectory-free loss functions using weak-form PDEs} 
+\subsection{The weak-form PDE for the empirical distribution} 
+We overcome the challenge by constructing trajectory-free loss functions based on the weak-form PDE that characterizes the evolution of the empirical distribution of particles. The empirical distribution does not require the trajectory information of any particle, but it accounts for the temporal evolution of the ensemble. 
+
+Specifically, let $\mu_t^N (x):= \frac{1}{N}\sum_{i=1}^N \delta_{X_t^i-x}$ be the empirical distribution of the particles at time $t$, 
+where $\delta_x$ is the Dirac delta function at $x\in \R^d$. It evolves according to the following weak-form PDE: 
+\begin{equation}\label{eq:mild-PDE}
+\partial_t \mu_{t}^N =  - \nabla \cdot   \left[ \mu_{t}^N \nabla  \big( \Phi*\mu_{t}^N + V\big)  \right]   +\frac{\sigma^2}{2} \Delta \mu_{t}^N + \sigma m^{\bX_t}, \quad x\in \R^d, t\in [0,T], 
+\end{equation}
+ where $m^\bX_t$ is a $\bX_t$-dependent measure that leads to a martingale term. Equivalently, for any test function $f\in C^2_b(\R^d)$, 
+$$ d  \frac{1}{N} \sum_i f(X_t^i)  =  \frac{1}{N} \sum_i  \big[ \nabla f(X_t^i) \big(\nabla V(X_t^i) + \frac{1}{N} \sum_j \nabla \Phi(X_t^i-X_t^j) \big)  + \frac{\sigma^2}{2}   \Delta f(X_t^i) \big] dt + \sigma m^{\bX_t}(f) 
+$$
+with $$  m^{\bX_t}(f)  :=\frac{1}{N} \sum_i  \nabla f(X_t^i)  dW_t^i.$$ 
+ In other words, the weak-form PDE is derived from the ODE/SDE of the particle system \eqref{eq:opt_model_R}  by applying the chain rule or the It\^{o} formula to $\innerp{\mu_t^N,f}$. 
+
+Importantly, it is not the Liouville or Fokker-Planck equation of the ODE or SDE, which characterizes the evolution of the joint probability density of the particles on $\R^{Nd}$. Instead, it is a PDE for the evolution of the empirical distribution of the particles on $\R^d$. In particular, when the particle system is stochastic, it is a non-closed stochastic PDE with a state-dependent martingale term $m^{\bX_t}(f)$. 
+
+The weak-form PDE characterizes the evolution of the empirical distribution of the particles. It does not require the trajectory information of any single particle. It takes into account the full information of the data, which consists of a sequence of ensembles. It provides the foundation for our construction of trajectory-free loss functions. 
+
+
+\subsection{Trajectory-free loss functions.} 
+We propose a new trajectory-free loss function for learning the potential functions from the unlabeled ensemble data \eqref{eq:data_ensemble}. For simplicity, we assume that $M_\ell\equiv M$ for all  $\ell$. Our trajectory-free loss function has the following form:  \vspace{-3mm}
+\begin{equation}\label{eq:loss_trajFree}
+\begin{aligned}
+\calE_{\mathcal{D}}(\Phi,V) 	 =&  \frac{1}{M}\sum_{m,\ell=1}^{M,L} \calE_{\bX_{t_\ell}^{m},\bX_{t_{\ell+1}}^{m}}(\Phi,V), \quad \text{ with } \\
+\calE_{\bX_{t_\ell},\bX_{t_{\ell+1}}}(\Phi,V) 	  
+ = & \underbrace{\int |\nabla V+ \nabla \Phi *\mu_{t_\ell}^N|^2\mu_{t_\ell}^N dx \Delta t }_{Dissipation}  
+  + \underbrace{\sigma \int [\Delta V+ \Delta \Phi *\mu_{t_\ell}^N ] \mu_{t_\ell}^N dx \Delta t}_{Diffusion}  \\
+  & - \underbrace{2\int [ V+  \Phi *\mu_{t}^N ] \mu_{t}^N dx \Big|_{t_\ell}^{t_{\ell+1}}}_{Energy~change},
+%\calE_{\bX_{t},\bX_{s}}(\Phi,V) 	  
+% = &  \int |\nabla V+ \nabla \Phi *\mu_t^N|^2\mu_t^N dx  + \sigma \int [\Delta V+ \Delta \Phi *\mu_{t}^N ] \mu_{t}^N dx -\int [ V+  \Phi *\mu_{t}^N ] \mu_{t}^N dx \Big|_{t}^{s},
+\end{aligned}
+\end{equation}
+% \frac{1}{N} \sum_{i = 1}^N\big|\nabla V(X_{t_\ell}^i)+ \frac{1}{N}\sum_{j = 1}^N \nabla \Psi (X_{t_\ell}^i- X_{t_\ell}^j) \big|^2   \\  &  - \frac{\sigma^2}{N^2} \sum_{i,j = 1}^N \big[\Delta V(X_{t_\ell}^i) + \Delta \Phi(X_{t_\ell}^i - X_{t_\ell}^j) \big] + \frac{1}{N^2}\sum_{i,j= 1}^N \big[  V(X_{t}^i) + \Phi (X_{t}^i- X_{t}^j) \big] \Big|_{t_\ell}^{t_{l+1}} . 
+where by the definition of $\mu_t^N$, the three integrals in the dissipation, diffusion, and energy change terms can be computed as:
+\begin{align*}
+J_{diss} = \int |\nabla V+ \nabla \Phi *\mu_{t}^N|^2\mu_{t}^N dx & =   \frac{1}{N} \sum_{i = 1}^N\big|\nabla V(X_{t}^i)+ \frac{1}{N}\sum_{j = 1}^N \nabla \Phi (X_{t}^i- X_{t}^j) \big|^2, \\
+J_{diff} = \int |\Delta V+ \Delta \Phi *\mu_{t}^N|\mu_{t}^N dx & = \frac{1}{N^2} \sum_{i,j = 1}^N \big[\Delta V(X_{t}^i) + \Delta \Phi(X_{t}^i - X_{t}^j) \big] , \\
+J_{energy} = \int [ V+  \Phi *\mu_{t}^N ] \mu_{t}^N dx  & = \frac{1}{N^2}\sum_{i,j= 1}^N \big[  V(X_{t}^i) + \Phi (X_{t}^i- X_{t}^j) \big]. 
+\end{align*}. 
+% Note that we can only identify the potential functions upto a constant. 
+
+
+It is \textbf{trajectory-free} because the first two terms in $\calE_{\bX_{t_\ell:t_{\ell+1}}}(\Psi,V)$ don't use any trajectory information, and the last term only requires the sequential information of the empirical measures $\mu_{t_\ell}^N\to \mu_{t_{\ell+1}}^N$, but not the trajectory of any single particle. 
+
+We derive this loss function using $\Phi*\mu_t^N + V$ as the test function in the weak-form PDE in \eqref{eq:mild-PDE}. It shares the idea of using weak solutions in \cite{messenger2022learning,mavridis2022learning,wen2016_MaximumLikelihood} to avoid the need for a strong solution, which does not exist in our setting. This test function solves the difficult problem of selecting a large class of test functions, particularly when the state $X_t^i$ is high-dimensional. It is tailored for inferring function parameters in Wasserstein gradient flows.  
+ 
+ 
+ \section{Computation: neural network regression}
+\label{sec:NN_regression}
+
+\subsection{Neural network regression using the self-test loss}
+We employ neural networks to approximate the unknown potentials $V$ and $\Phi$. Let $V_{\theta}:\R^d \to \R$ and $\Phi_{\eta}:\R^d \to \R$ be parametrized by deep neural networks with weights $\theta$ and $\eta$. To ensure the physical consistency of the interaction potential, we enforce symmetry by setting $\Phi_{\eta}(x) = \frac{1}{2}(\tilde{\Phi}_{\eta}(x) + \tilde{\Phi}_{\eta}(-x))$, where $\tilde{\Phi}_{\eta}$ is the raw network output.
+
+Unlike strong-form methods that require estimating time derivatives (velocities) $\frac{dX_t}{dt}$---which is impossible with unlabeled ensemble data---our approach utilizes the time-integrated weak form. The loss function $\calE_{\mathcal{D}}(\Phi_\eta, V_\theta)$ is computed using the discrete ensembles directly.
+
+The spatial gradients $\nabla V_\theta(x)$ and $\nabla \Phi_\eta(x)$ required in the loss function are computed via Automatic Differentiation (AD) with respect to the inputs $x$. This avoids numerical errors associated with spatial finite differences on scattered data.
+
+\vspace{2mm}
+\noindent\textbf{Algorithm 1: Neural Network Estimation via Self-Test Loss}
+\begin{enumerate}
+    \item \textbf{Input:} Unlabeled ensembles $\mathcal{D} = \{\bX_{t_\ell}^{1:M}\}_{\ell=1}^{L}$.
+    \item \textbf{Initialization:} Initialize network parameters $\theta, \eta$.
+    \item \textbf{Optimization Loop:}
+    \begin{itemize}
+        \item Sample a batch of time indices $\mathcal{I}_{batch} \subset \{1, \dots, L-1\}$.
+        \item For each $\ell \in \mathcal{I}_{batch}$:
+        \begin{itemize}
+            \item \textbf{Dissipation Term:} Compute the drift vector for all particles in the ensemble at $t_\ell$:
+            \[
+            D(X_{t_\ell}^i) = \nabla V_\theta(X_{t_\ell}^i) + \frac{1}{N} \sum_{j \neq i} \nabla \Phi_\eta(X_{t_\ell}^i - X_{t_\ell}^j)
+            \]
+            Compute the dissipation integral estimate (Monte Carlo):
+            \[
+            J_{diss} = \frac{1}{M} \sum_{m=1}^M \frac{1}{N} \sum_{i=1}^N \| D(X_{t_\ell}^{i,m}) \|^2 \Delta t_\ell
+            \]
+            \item \textbf{Diffusion Term:} Compute the Laplacians for all particles at $t_\ell$:
+            \[
+            L(X_{t_\ell}^i) = \Delta V_\theta(X_{t_\ell}^i) + \frac{1}{N} \sum_{j \neq i} \Delta \Phi_\eta(X_{t_\ell}^i - X_{t_\ell}^j)
+            \]
+            Compute the diffusion integral estimate (Monte Carlo):
+            \[
+            J_{diff} = \frac{\sigma}{M} \sum_{m=1}^M \frac{1}{N} \sum_{i=1}^N L(X_{t_\ell}^{i,m}) \Delta t_\ell
+            \]
+            \item \textbf{Energy Term:} Compute the energy change between snapshots $t_\ell$ and $t_{\ell+1}$:
+            \[
+            E(t) = \frac{1}{N} \sum_{i=1}^N V_\theta(X_{t}^i) + \frac{1}{2N^2} \sum_{i,j} \Phi_\eta(X_{t}^i - X_{t}^j)
+            \]
+            Calculate difference: $\Delta J_{energy} = \frac{1}{M} \sum_{m=1}^M [E(t_{\ell+1}) - E(t_\ell)]$.
+        \end{itemize}
+        \item \textbf{Loss Calculation:} Construct the empirical loss:
+        \[
+        \widehat{\mathcal{L}}(\theta, \eta) = \sum_{\ell \in \mathcal{I}_{batch}} \left( J_{diss}^{(\ell)} + J_{diff}^{(\ell)} + 2 \Delta J_{energy}^{(\ell)} \right)
+        \]
+        \item \textbf{Backpropagation:} Compute gradients $\nabla_{\theta, \eta} \widehat{\mathcal{L}}$ and update weights using Adam/NAdam.
+    \end{itemize}
+    \item \textbf{Output:} Learned potentials $V_{\hat{\theta}}, \Phi_{\hat{\eta}}$.
+\end{enumerate}
+
+Crucially, this algorithm only pairs distributions $\mu_{t_\ell}^N$ and $\mu_{t_{\ell+1}}^N$ via the energy difference term; it never assumes $X_{t_\ell}^i$ and $X_{t_{\ell+1}}^i$ correspond to the same particle.
+ 
+
+\subsection{Numerical examination of accuracy}
+After obtaining the estimated potentials $V_{\hat{\theta}}$ and $\Phi_{\hat{\eta}}$ from the optimization process, we numerically assess their accuracy. In a synthetic data setting where the true potentials $V_{true}$ and $\Phi_{true}$ are known, we perform a quantitative comparison. The accuracy is evaluated by computing the relative $L^2$ error over a set of test points $\{\bX_{t_l}^m\}_{l=1,m=1}^{L_{test},M_{test} }$ sampled from the same distribution as the training data. The errors for the potential functions and their gradients are calculated as:
+\begin{align*}
+\text{Error}(\Phi) &= \frac{\sqrt{\sum_{l=1}^{L_{test}} \sum_{m=1}^{M_{test}} \sum_{i,j} |\Phi_{\hat{\eta}}( r_{lijm}) - \Phi_{true}( r_{lijm})|^2}}{\sqrt{\sum_{l=1}^{L_{test}} \sum_{m=1}^{M_{test}} \sum_{i,j}|\Phi_{true}( r_{lijm})|^2}}, r_{lijm} :=X_{t_l}^{j,m} - X_{t_l}^{i,m}  \\
+\text{Error}(V) &= \frac{\sqrt{\sum_{l=1}^{L_{test}} \sum_{m=1}^{M_{test}} \sum_i  |V_{\hat{\theta}}(X_{t_l}^{i,m}) - V_{true}(X_{t_l}^{i,m})|^2}}{\sqrt{\sum_{l=1}^{L_{test}} \sum_{m=1}^{M_{test}}  \sum_i |V_{true}(X_{t_l}^{i,m})|^2}}. 
+\end{align*}
+Additionally, we can visually compare the learned potentials and their gradients against the true functions by plotting them over a 1D or 2D grid. This provides a qualitative assessment of the learning performance.
+
+\bibliographystyle{alpha}
+\bibliography{references}
+
+
+
+
+\end{document}

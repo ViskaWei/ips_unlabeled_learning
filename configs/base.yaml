@@ -1,0 +1,53 @@
+# Base configuration - shared settings
+# Do NOT modify directly, use MVP-specific configs that inherit from this
+
+project: "ips_unlabeled"
+seed: 42
+
+# Data generation
+data:
+  d: 1              # dimension
+  N: 10             # number of particles
+  M: 200            # samples per snapshot
+  L: 20             # number of snapshots
+  T: 1.0            # total time
+  sigma: 0.1        # noise level
+  dt: 0.01          # SDE integration step
+
+# True potentials (for synthetic data)
+potentials:
+  V:
+    type: "harmonic"
+    k: 1.0          # V(x) = 0.5 * k * x^2
+  Phi:
+    type: "gaussian"
+    scale: 1.0      # Phi(r) = scale * exp(-r^2)
+
+# Neural network
+model:
+  type: "mlp"
+  hidden_dims: [64, 64]
+  activation: "tanh"
+  symmetric: true   # enforce Phi(x) = Phi(-x)
+
+# Training
+training:
+  epochs: 30        # exploration phase default
+  batch_size: 32
+  lr: 1e-4
+  optimizer: "adam"
+  scheduler: null
+
+# Output
+output:
+  base_dir: "results"
+  save_model: true
+  save_freq: 10     # save every N epochs
+  plot_freq: 10     # plot every N epochs
+
+# Logging
+logging:
+  level: "INFO"
+  wandb:
+    enabled: false
+    project: "ips_unlabeled"

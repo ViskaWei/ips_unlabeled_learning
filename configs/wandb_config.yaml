@@ -1,0 +1,42 @@
+# wandb configuration for convergence phase experiments
+# Only enable for 🎯收敛 phase experiments
+
+wandb:
+  enabled: false  # Set to true for 收敛期
+  project: "ips_unlabeled"
+  entity: null  # your wandb username or team
+
+  # Run naming
+  name_template: "{exp_id}_{seed}"
+  tags: ["ips", "trajectory-free"]
+
+  # Logging frequency
+  log_freq: 10  # log every N steps
+
+  # What to log
+  log:
+    - loss
+    - loss_diss
+    - loss_diff
+    - loss_energy
+    - error_phi
+    - error_v
+    - error_grad_phi
+    - error_grad_v
+    - lr
+
+  # Checkpointing
+  save_model: true
+  save_freq: 100  # save every N epochs
+
+# Training configs for different phases
+training:
+  explore:  # 🔍探索期
+    epochs: 30
+    seeds: [42]
+    wandb_enabled: false
+
+  converge:  # 🎯收敛期
+    epochs: 500
+    seeds: [42, 123, 456, 789, 1024]
+    wandb_enabled: true

@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+venv/
+ENV/
+env/
+.venv/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb_checkpoints
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (keep directory structure, ignore contents)
+logs/*.log
+logs/*.pid
+
+# Data (keep directory structure, ignore contents)
+data/*
+!data/.gitkeep
+
+# Results (keep directory structure, ignore contents)
+results/*
+!results/.gitkeep
+
+# Configs with secrets
+configs/*.secret.*
+configs/local.yaml
+
+# Experiment artifacts (keep structure, ignore large files)
+experiments/**/*.pt
+experiments/**/*.pth
+experiments/**/*.ckpt
+experiments/**/*.pkl
+experiments/**/*.npy
+experiments/**/*.npz
+
+# Large files
+*.h5
+*.hdf5
+*.tar
+*.tar.gz
+*.zip
+
+# Environment files
+.env
+.env.local
+*.env
+
+# Cursor
+.cursor/

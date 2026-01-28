@@ -1,0 +1,27 @@
+# MVP-2.0: 数据量敏感性
+# 测试不同 L, M 组合
+
+_base_: "base.yaml"
+
+mvp: "2.0"
+exp_id_prefix: "IPS-mvp2_0"
+stage: "explore"
+
+# Sweep over these values (run multiple times)
+data:
+  d: 1
+  N: 10
+  # Vary these:
+  M: 200    # [50, 100, 200, 500]
+  L: 20     # [5, 10, 20, 50]
+
+training:
+  epochs: 30
+  lr: 1e-4
+
+output:
+  base_dir: "results/mvp2_0"
+
+logging:
+  wandb:
+    enabled: false

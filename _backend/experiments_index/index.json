@@ -1,0 +1,53 @@
+[
+  {
+    "experiment_id": "VIT-20251201-gta-01",
+    "project": "VIT",
+    "topic": "gta",
+    "status": "completed",
+    "start_time": "2025-12-01T13:03:02.295445",
+    "end_time": "2025-12-01T13:03:02.295445",
+    "entry_point": "scripts/global_feature_experiments.py",
+    "config_path": "configs/global_feature_mvp.yaml",
+    "output_path": "results/global_features",
+    "log_path": "",
+    "metrics_summary": "R2=0.9986, Best=MVP_F1F2F3_nz1p0, Dim=121, Time=32s",
+    "physics_ai_logg_path": "",
+    "priority": "P1",
+    "next_action": "",
+    "notes": ""
+  },
+  {
+    "experiment_id": "VIT-20251205-lightgbm-01",
+    "project": "VIT",
+    "topic": "lightgbm",
+    "status": "completed",
+    "start_time": "2025-12-05T00:00:00",
+    "end_time": "2025-12-05T00:00:00",
+    "entry_point": "train_lightgbm.py",
+    "config_path": "configs/exp/logg/lightgbm.yaml",
+    "output_path": "models/lightgbm_e1000_l63_lr005_ff08_bf08_bf5_n32k",
+    "log_path": "",
+    "metrics_summary": "Best R2=0.9982 (nz0), 9 noise levels, 36 HP configs",
+    "physics_ai_logg_path": "logg/exp_lightgbm_results_20251205.md",
+    "priority": "P1",
+    "next_action": "",
+    "notes": "Noise sweep + HP sweep summary"
+  },
+  {
+    "experiment_id": "VIT-20251227-vit-sweep-01",
+    "project": "VIT",
+    "topic": "vit",
+    "status": "running",
+    "start_time": "2025-12-27T16:11:07.847435",
+    "end_time": "",
+    "entry_point": "scripts/launch_top3_200ep.sh",
+    "config_path": "configs/exp/vit_200ep_top*.yaml",
+    "output_path": "results/vit_200ep_top*.log",
+    "log_path": null,
+    "metrics_summary": "Sweep best val_R2=0.6619, Top3 configs training for 200 epochs",
+    "physics_ai_logg_path": null,
+    "priority": "P1",
+    "next_action": null,
+    "notes": "Sweep analysis selected p16_h256_L6_a8 (best), p8_h128_L8_a4 (small patch), p32_h256_L4_a4 (large patch)"
+  }
+]

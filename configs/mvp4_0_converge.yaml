@@ -1,0 +1,38 @@
+# MVP-4.0: 最终验证 (收敛期)
+# 大规模实验，多 seed，wandb 必须开启
+
+_base_: "base.yaml"
+
+mvp: "4.0"
+exp_id_prefix: "IPS-mvp4_0"
+stage: "converge"  # 收敛期！
+
+# Full scale data
+data:
+  d: 1
+  N: 50
+  M: 500
+  L: 50
+
+# Best model from exploration
+model:
+  type: "mlp"
+  hidden_dims: [128, 128, 64]
+
+# Convergence training
+training:
+  epochs: 500
+  lr: 1e-4
+  seeds: [42, 123, 456, 789, 1024]  # 5 seeds for statistics
+
+output:
+  base_dir: "results/mvp4_0"
+  save_model: true
+  save_freq: 50
+
+# MUST enable wandb for convergence phase
+logging:
+  wandb:
+    enabled: true
+    project: "ips_unlabeled"
+    tags: ["converge", "final"]
