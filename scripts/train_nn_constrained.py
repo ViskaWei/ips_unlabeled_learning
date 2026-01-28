@@ -162,6 +162,7 @@ class ConstrainedTrajectoryFreeLoss(nn.Module):
         super().__init__()
         self.sigma = sigma
         self.sigma_sq = sigma ** 2
+        self.sigma_sq_half = sigma ** 2 / 2  # Correct coefficient for diffusion
         self.d = d
 
         # Regularization weights
@@ -299,23 +300,24 @@ class ConstrainedTrajectoryFreeLoss(nn.Module):
                 J_diss = (drift ** 2).sum() / N * dt
 
                 laplacian_sum = self.compute_laplacian_sum(X_curr, networks)
-                J_diff = self.sigma_sq * laplacian_sum.mean() * dt
+                J_lap = laplacian_sum.mean() * dt  # Raw Laplacian (apply coef later)
 
                 E_curr = self.compute_energy(X_curr, networks)
                 E_next = self.compute_energy(X_next, networks)
                 J_energy_change = E_next - E_curr
 
                 total_diss = total_diss + J_diss
-                total_diff = total_diff + J_diff
+                total_diff = total_diff + J_lap  # Store raw Laplacian
                 total_energy_change = total_energy_change + J_energy_change
 
         n_pairs = M * (L - 1)
         total_diss = total_diss / n_pairs
-        total_diff = total_diff / n_pairs
+        total_lap = total_diff / n_pairs  # Raw Laplacian term
         total_energy_change = total_energy_change / n_pairs
 
-        # Main loss: squared residual
-        residual = total_diss + total_diff - 2 * total_energy_change
+        # CORRECT weak-form formula (from Ito's lemma):
+        # R = J_diss - (σ²/2) * J_lap + dE = 0
+        residual = total_diss - self.sigma_sq_half * total_lap + total_energy_change
         loss_main = residual ** 2
 
         # Regularization
@@ -335,7 +337,7 @@ class ConstrainedTrajectoryFreeLoss(nn.Module):
             'loss_reg': loss_reg.item(),
             'residual': residual.item(),
             'J_diss': total_diss.item(),
-            'J_diff': total_diff.item(),
+            'J_lap': total_lap.item(),
             'J_energy_change': total_energy_change.item(),
             'loss_anchor_V': reg['loss_anchor_V'].item(),
             'loss_decay_Phi': reg['loss_decay_Phi'].item(),

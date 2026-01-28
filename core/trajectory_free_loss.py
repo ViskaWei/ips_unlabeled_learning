@@ -1,12 +1,24 @@
 """Trajectory-free loss for learning interaction potentials.
 
-The loss is derived from the weak form of the Fokker-Planck equation:
-L(Phi, V) = sum over time pairs [J_diss + J_diff - 2 * J_energy_change]
+The loss is derived from Ito's lemma applied to the energy functional.
+
+For SDE: dX = b dt + σ dW, where b = -∇(V + Φ*μ)
+
+Ito's lemma gives:
+d⟨f, μ⟩ = ⟨∇f · b + (σ²/2) Δf, μ⟩ dt + martingale
+
+With f = V + Φ*μ (self-test function):
+dE = -⟨|∇(V + Φ*μ)|², μ⟩ dt + (σ²/2) ⟨Δ(V + Φ*μ), μ⟩ dt + martingale
+
+Rearranging, the weak-form residual is:
+R = J_diss - (σ²/2) J_lap + dE = 0 (in expectation)
 
 Where:
-- J_diss: Dissipation term (drift squared)
-- J_diff: Diffusion term (Laplacian)
-- J_energy: Energy at each time point
+- J_diss = ⟨|∇V + ∇Φ*μ|², μ⟩ Δt (dissipation term)
+- J_lap = ⟨ΔV + ΔΦ*μ, μ⟩ Δt (Laplacian term)
+- dE = E(t+Δt) - E(t) (energy change)
+
+NOTE: The coefficient for diffusion is -σ²/2 (NEGATIVE!), not +σ or +σ².
 """
 
 import torch
@@ -22,6 +34,7 @@ class TrajectoryFreeLoss(nn.Module):
         super().__init__()
         self.sigma = sigma
         self.sigma_sq = sigma ** 2
+        self.sigma_sq_half = sigma ** 2 / 2  # Correct coefficient for diffusion
         self.d = d
 
     def compute_drift(
@@ -174,13 +187,14 @@ class TrajectoryFreeLoss(nn.Module):
                 X_next = data[m, ell + 1]  # shape (N, d)
                 dt = t_snapshots[ell + 1] - t_snapshots[ell]
 
-                # Dissipation term: (1/N) sum_i |drift|² * dt
+                # Dissipation term: ⟨|∇V + ∇Φ*μ|², μ⟩ dt
+                # Note: compute_drift returns -∇V - ∇Φ*μ, so |drift|² = |∇V + ∇Φ*μ|²
                 drift = self.compute_drift(X_curr, networks)  # (N, d)
                 J_diss = (drift ** 2).sum() / N * dt
 
-                # Diffusion term: sigma² * (1/N) sum_i [laplacian sum] * dt
+                # Laplacian term: ⟨ΔV + ΔΦ*μ, μ⟩ dt
                 laplacian_sum = self.compute_laplacian_sum(X_curr, networks)  # (N,)
-                J_diff = self.sigma_sq * laplacian_sum.mean() * dt
+                J_lap = laplacian_sum.mean() * dt
 
                 # Energy change: E(t_{l+1}) - E(t_l)
                 E_curr = self.compute_energy(X_curr, networks)
@@ -188,28 +202,29 @@ class TrajectoryFreeLoss(nn.Module):
                 J_energy_change = E_next - E_curr
 
                 total_diss = total_diss + J_diss
-                total_diff = total_diff + J_diff
+                total_diff = total_diff + J_lap  # Store raw Laplacian term (apply coef later)
                 total_energy_change = total_energy_change + J_energy_change
 
         # Normalize by number of samples and time pairs
         n_pairs = M * (L - 1)
         total_diss = total_diss / n_pairs
-        total_diff = total_diff / n_pairs
+        total_lap = total_diff / n_pairs  # This is the raw Laplacian term
         total_energy_change = total_energy_change / n_pairs
 
-        # Weak form: J_diss + J_diff = 2 * J_energy_change (equality at true potentials)
-        # Loss: squared residual to ensure non-negative and proper minimization
-        residual = total_diss + total_diff - 2 * total_energy_change
-        loss = residual ** 2
+        # CORRECT weak-form formula (from Ito's lemma):
+        # R = J_diss - (σ²/2) * J_lap + dE = 0
+        #
+        # Note the MINUS sign before the Laplacian term and coefficient σ²/2
+        residual = total_diss - self.sigma_sq_half * total_lap + total_energy_change
 
-        # Also add a regularization term to keep potentials bounded
-        # This helps prevent divergence
+        # Loss: squared residual to ensure non-negative and proper minimization
+        loss = residual ** 2
 
         info = {
             'loss': loss.item(),
             'residual': residual.item(),
             'J_diss': total_diss.item(),
-            'J_diff': total_diff.item(),
+            'J_lap': total_lap.item(),
             'J_energy_change': total_energy_change.item(),
         }
 
