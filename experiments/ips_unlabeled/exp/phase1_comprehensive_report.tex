@@ -1,0 +1,515 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{tcolorbox}
+
+\geometry{margin=2.5cm}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{Phase 1 实验报告}
+\lhead{IPS Unlabeled Learning}
+\rfoot{\thepage}
+
+\definecolor{successgreen}{RGB}{40,167,69}
+\definecolor{failred}{RGB}{220,53,69}
+\definecolor{warningyellow}{RGB}{255,193,7}
+
+\newcommand{\pass}{\textcolor{successgreen}{\textbf{PASS}}}
+\newcommand{\fail}{\textcolor{failred}{\textbf{FAIL}}}
+
+\title{\textbf{Phase 1 综合实验报告}\\[0.5em]
+\large Trajectory-Free Loss 有效性验证\\[1em]
+\normalsize 项目：从无标签数据学习交互粒子系统}
+\author{Viska Wei}
+\date{2026年1月28日}
+
+\begin{document}
+
+\maketitle
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black,title=实验结论]
+\textbf{Gate-1 验证失败}。弱形式 loss 存在\textbf{根本性的 identifiability 问题}，无法仅从分布演化学习势函数。
+\end{tcolorbox}
+
+\tableofcontents
+\newpage
+
+%==============================================================================
+\section{研究背景与问题定义}
+%==============================================================================
+
+\subsection{研究动机}
+
+学习高维交互粒子系统的动力学是多个科学领域的基础任务。然而，在实际应用中常见的挑战是：数据仅包含在离散时间点采集的\textbf{无标签集合数据}（unlabeled ensemble data），缺少轨迹信息。这种数据缺失可能源于数据采集方法的限制或隐私保护需求。
+
+\subsection{数学模型}
+
+考虑由 $N$ 个粒子组成的交互粒子系统（IPS），其动力学由以下随机微分方程（SDE）描述：
+
+\begin{equation}
+dX_t^i = -\frac{1}{N}\sum_{j \neq i}^{N} \nabla\Phi(X_t^i - X_t^j)dt + \nabla V(X_t^i)dt + \sigma dW_t^i, \quad i = 1,\ldots,N
+\label{eq:sde}
+\end{equation}
+
+其中：
+\begin{itemize}[noitemsep]
+    \item $X_t^i \in \mathbb{R}^d$ 是第 $i$ 个粒子在时刻 $t$ 的位置
+    \item $\Phi: \mathbb{R}^d \to \mathbb{R}$ 是\textbf{交互势函数}（interaction potential）
+    \item $V: \mathbb{R}^d \to \mathbb{R}$ 是\textbf{外势函数}（kinetic/external potential）
+    \item $W_t^i$ 是独立的标准布朗运动
+    \item $\sigma > 0$ 是噪声强度
+\end{itemize}
+
+\subsection{数据形式}
+
+观测数据由一系列时间快照的样本集合组成：
+\begin{equation}
+\mathcal{D} = \{X_{t_\ell}^{1:M}\}_{\ell=1}^{L}, \quad \text{其中} \quad X_t = (X_t^1, \ldots, X_t^N)
+\end{equation}
+
+\textbf{关键约束}：数据缺少轨迹信息——位置 $X_{t_\ell}^{i,m}$ 和 $X_{t_{\ell+1}}^{i,m}$ 在数据中\textbf{不配对}，因为标签未知或它们可能来自不同的轨迹。
+
+\subsection{研究目标}
+
+\textbf{目标}：从无标签集合数据 $\mathcal{D}$ 中学习交互势函数 $\Phi$ 和外势函数 $V$。
+
+\textbf{挑战}：传统方法（MLE、MSE）需要轨迹信息来计算 $dX_t^i/dt$，无法直接应用于无标签数据。
+
+%==============================================================================
+\section{方法论：Trajectory-Free Loss}
+%==============================================================================
+
+\subsection{弱形式 PDE}
+
+论文提出使用经验分布的弱形式 PDE 来构建不需要轨迹的损失函数。设 $\mu_t^N(x) := \frac{1}{N}\sum_{i=1}^{N}\delta_{X_t^i - x}$ 为粒子在时刻 $t$ 的经验分布，其演化满足：
+
+\begin{equation}
+\partial_t \mu_t^N = -\nabla \cdot \left[\mu_t^N \nabla(\Phi * \mu_t^N + V)\right] + \frac{\sigma^2}{2}\Delta\mu_t^N + \sigma m_{X_t}
+\end{equation}
+
+\subsection{原论文的损失函数}
+
+论文提出的 trajectory-free loss 形式为：
+
+\begin{equation}
+\mathcal{E}_{\mathcal{D}}(\Phi, V) = \frac{1}{M}\sum_{m,\ell} \mathcal{E}_{X_{t_\ell}^m, X_{t_{\ell+1}}^m}(\Phi, V)
+\end{equation}
+
+其中每对时间快照的损失为：
+\begin{equation}
+\mathcal{E}_{X_{t_\ell}, X_{t_{\ell+1}}} = \underbrace{J_{\text{diss}}\Delta t}_{\text{耗散项}} + \underbrace{\sigma J_{\text{lap}}\Delta t}_{\text{扩散项}} - \underbrace{2\Delta E}_{\text{能量变化}}
+\label{eq:original_loss}
+\end{equation}
+
+各项的具体计算：
+\begin{align}
+J_{\text{diss}} &= \frac{1}{N}\sum_{i=1}^{N}\left|\nabla V(X_t^i) + \frac{1}{N}\sum_{j=1}^{N}\nabla\Phi(X_t^i - X_t^j)\right|^2 \\
+J_{\text{lap}} &= \frac{1}{N^2}\sum_{i,j=1}^{N}\left[\Delta V(X_t^i) + \Delta\Phi(X_t^i - X_t^j)\right] \\
+E(t) &= \frac{1}{N}\sum_{i=1}^{N}V(X_t^i) + \frac{1}{2N^2}\sum_{i,j}\Phi(X_t^i - X_t^j)
+\end{align}
+
+\subsection{我们发现的公式错误}
+
+\begin{tcolorbox}[colback=yellow!10!white,colframe=orange!75!black,title=重要发现：Loss 公式系数错误]
+通过 Itô 引理重新推导，我们发现原论文公式 (\ref{eq:original_loss}) 存在系数错误。
+
+\textbf{原公式}：$\mathcal{L} = J_{\text{diss}} + \sigma \cdot J_{\text{lap}} - 2 \cdot dE$
+
+\textbf{正确公式}：$R = J_{\text{diss}} - \frac{\sigma^2}{2} \cdot J_{\text{lap}} + dE = 0$
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+\textbf{项} & \textbf{原公式} & \textbf{正确公式} \\
+\midrule
+Laplacian 系数 & $+\sigma$ & $-\sigma^2/2$ \\
+能量项系数 & $-2$ & $+1$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{tcolorbox}
+
+%==============================================================================
+\section{实验设计与实现}
+%==============================================================================
+
+\subsection{实验配置}
+
+\begin{table}[h]
+\centering
+\caption{实验参数配置}
+\begin{tabular}{llp{8cm}}
+\toprule
+\textbf{参数} & \textbf{值} & \textbf{说明} \\
+\midrule
+维度 $d$ & 1 & 简化问题，验证方法可行性 \\
+粒子数 $N$ & 5--10 & 小规模系统 \\
+时间快照 $L$ & 10--20 & 离散时间点数量 \\
+样本数 $M$ & 30--100 & 每个时间点的独立样本数 \\
+噪声强度 $\sigma$ & 0.1 & 中等噪声水平 \\
+时间步长 $dt$ & 0.01 & SDE 模拟步长 \\
+总时间 $T$ & 2.0 & 模拟总时长 \\
+\midrule
+外势 $V$ & $V(x) = 0.5x^2$ & 简谐势（Harmonic） \\
+交互势 $\Phi$ & $\Phi(r) = e^{-r^2/2}$ & 高斯排斥势 \\
+\midrule
+网络架构 & MLP [64, 64] & 两层全连接网络 \\
+激活函数 & Tanh & 平滑激活 \\
+优化器 & Adam & 学习率 0.001 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{神经网络实现}
+
+使用 PyTorch 实现势函数的神经网络表示：
+
+\begin{itemize}
+    \item \textbf{V 网络}：$V_\theta: \mathbb{R}^d \to \mathbb{R}$，标准 MLP
+    \item \textbf{Φ 网络}：$\Phi_\eta: \mathbb{R}^d \to \mathbb{R}$，强制对称性 $\Phi_\eta(x) = \frac{1}{2}[\tilde{\Phi}_\eta(x) + \tilde{\Phi}_\eta(-x)]$
+    \item \textbf{导数计算}：使用自动微分（AD）计算 $\nabla V$, $\nabla\Phi$, $\Delta V$, $\Delta\Phi$
+\end{itemize}
+
+\subsection{评估指标}
+
+相对 $L^2$ 误差：
+\begin{equation}
+\text{Error}(\Phi) = \sqrt{\frac{\sum_{l,m,i,j}|\Phi_{\hat{\eta}}(r_{lijm}) - \Phi_{\text{true}}(r_{lijm})|^2}{\sum_{l,m,i,j}|\Phi_{\text{true}}(r_{lijm})|^2}}
+\end{equation}
+
+\textbf{通过标准}：$\text{Error}(V) < 10\%$ 且 $\text{Error}(\Phi) < 10\%$
+
+%==============================================================================
+\section{实验结果}
+%==============================================================================
+
+\subsection{MVP-0.0: SDE 数据生成验证 \pass}
+
+\textbf{目标}：验证 Euler-Maruyama 模拟器的正确性。
+
+\textbf{方法}：对 Ornstein-Uhlenbeck 过程（$V=0.5x^2$, $\Phi=0$），比较数值解与解析解。
+
+\begin{table}[h]
+\centering
+\caption{SDE 验证结果}
+\begin{tabular}{lccc}
+\toprule
+\textbf{指标} & \textbf{测量值} & \textbf{阈值} & \textbf{状态} \\
+\midrule
+KL 散度 & 0.0005 & $<0.01$ & \pass \\
+方差相对误差 & 0.42\% & $<5\%$ & \pass \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{结论}：数据生成正确，可进行后续实验。
+
+\subsection{MVP-1.0: Joint V+Φ 学习 \fail}
+
+\textbf{目标}：验证 trajectory-free loss 能否同时学习 V 和 Φ。
+
+\begin{table}[h]
+\centering
+\caption{MVP-1.0 实验结果}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{配置} & \textbf{V Error} & \textbf{Φ Error} & \textbf{Final Loss} & \textbf{Epochs} \\
+\midrule
+hidden=[32,32], lr=0.01 & 162.31\% & 19.30\% & $\sim 0$ & 31 \\
+hidden=[64,64], lr=0.001 & 98.72\% & 94.10\% & $1.3\times10^{-7}$ & 32 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{tcolorbox}[colback=red!5!white,colframe=red!75!black,title=关键发现]
+\begin{itemize}[noitemsep]
+    \item Loss 快速收敛到 $\sim 0$（触发 early stopping）
+    \item 但 V 和 Φ 形状完全错误
+    \item V 学成了\textbf{凹函数}（真实是凸函数）
+    \item \textbf{结论}：Loss$\to$0 \textbf{不保证}正确解
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{MVP-1.0b: Φ-only 学习（已知 V）\fail}
+
+\textbf{目标}：消除 V-Φ trade-off，固定 V 为真实值，仅训练 Φ。
+
+\begin{table}[h]
+\centering
+\caption{MVP-1.0b 实验结果}
+\begin{tabular}{lccc}
+\toprule
+\textbf{配置} & \textbf{Φ Error} & \textbf{Final Loss} & \textbf{Epochs} \\
+\midrule
+N=5, L=10, M=30 & 78.13\% & 0.018 & 100 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{关键观察}：
+\begin{itemize}[noitemsep]
+    \item 即使 V 已知，Φ 仍学不对
+    \item Loss 没有收敛到 0（停在 0.018）
+    \item 说明问题不仅是 V-Φ trade-off，loss 公式本身可能有问题
+\end{itemize}
+
+\subsection{MVP-1.1: 添加 Identifiability 约束 \fail}
+
+\textbf{目标}：通过添加约束解决 identifiability 问题。
+
+\textbf{约束设计}：
+\begin{enumerate}[noitemsep]
+    \item $V(0) = 0$ — 锚定 V 在原点
+    \item $\Phi(r_{\text{ref}}) = 0$ — Φ 在参考距离为 0
+    \item 梯度范数正则化
+\end{enumerate}
+
+\textbf{实现}：
+\begin{align}
+V(x) &= V_{\text{raw}}(x) - V_{\text{raw}}(0) \\
+\Phi(r) &= \Phi_{\text{raw}}(r) - \Phi_{\text{raw}}(r_{\text{ref}})
+\end{align}
+
+\begin{table}[h]
+\centering
+\caption{MVP-1.1 实验结果}
+\begin{tabular}{lccc}
+\toprule
+\textbf{配置} & \textbf{V Error} & \textbf{Φ Error} & \textbf{Final Loss} \\
+\midrule
+N=10, L=20, M=100 & 110.28\% & 88.89\% & $\sim 0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{结论}：简单约束无效。问题不在势函数的常数项，而在形状（梯度）。
+
+\subsection{MVP-1.2: Loss 公式验证 \pass}
+
+\textbf{目标}：从理论推导检验 loss 公式的正确性。
+
+\textbf{方法}：
+\begin{enumerate}[noitemsep]
+    \item 从 Itô 引理重新推导弱形式公式
+    \item 用真实势函数计算各项，验证残差
+\end{enumerate}
+
+\textbf{验证结果}：残差随 $dt \to 0$ 线性收敛到 0。
+
+\begin{table}[h]
+\centering
+\caption{残差收敛验证}
+\begin{tabular}{cc}
+\toprule
+\textbf{dt} & \textbf{Mean Residual} \\
+\midrule
+0.20 & $1.57\times10^{-1}$ \\
+0.10 & $7.65\times10^{-2}$ \\
+0.05 & $3.76\times10^{-2}$ \\
+0.02 & $1.49\times10^{-2}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{结论}：正确公式为 $R = J_{\text{diss}} - \frac{\sigma^2}{2}J_{\text{lap}} + dE = 0$。
+
+\subsection{MVP-1.2b: 修正公式训练 \fail}
+
+\textbf{目标}：用修正后的公式重新训练。
+
+\begin{table}[h]
+\centering
+\caption{MVP-1.2b 实验结果}
+\begin{tabular}{lccc}
+\toprule
+\textbf{配置} & \textbf{V Error} & \textbf{Φ Error} & \textbf{Final Loss} \\
+\midrule
+修正公式 & 97.62\% & 128.35\% & $\sim 0$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{结论}：修正公式后仍然失败。问题是根本性的 identifiability，不是公式 bug。
+
+%==============================================================================
+\section{结果汇总}
+%==============================================================================
+
+\begin{table}[h]
+\centering
+\caption{Phase 1 所有实验结果汇总}
+\begin{tabular}{llcccc}
+\toprule
+\textbf{MVP} & \textbf{名称} & \textbf{V Error} & \textbf{Φ Error} & \textbf{Loss} & \textbf{状态} \\
+\midrule
+0.0 & SDE 数据生成 & - & - & - & \pass \\
+1.0 & Joint V+Φ & 162\% & 94\% & $\sim 0$ & \fail \\
+1.0b & Φ-only (原公式) & - & 78\% & 0.018 & \fail \\
+1.1 & 约束版 & 110\% & 89\% & $\sim 0$ & \fail \\
+1.2 & Loss 公式验证 & - & - & - & \pass \\
+1.2b & 修正公式 & 98\% & 128\% & $\sim 0$ & \fail \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{根因分析}
+%==============================================================================
+
+\subsection{为什么弱形式 loss 无法学习势函数？}
+
+\subsubsection{数学层面}
+
+弱形式公式 $J_{\text{diss}} - \frac{\sigma^2}{2}J_{\text{lap}} + dE = 0$ 是一个\textbf{能量平衡方程}。
+
+对于\textbf{任何}满足这个平衡的 $(V, \Phi)$ 对都成立，不仅仅是真实的势函数。
+
+\textbf{数学表述}：
+\begin{itemize}[noitemsep]
+    \item 设 $(V_{\text{true}}, \Phi_{\text{true}})$ 是真实势函数
+    \item 设 $F = \nabla V_{\text{true}} + \nabla\Phi_{\text{true}} * \mu$ 是真实的力场
+    \item 存在无穷多个 $(V', \Phi')$ 使得 $\nabla V' + \nabla\Phi' * \mu = F$
+    \item 这些 $(V', \Phi')$ 给出相同的分布演化，弱形式 loss 无法区分
+\end{itemize}
+
+\subsubsection{物理直觉}
+
+粒子只"感受"到总力 $F = -\nabla V - \nabla\Phi * \mu$。
+
+仅从粒子运动无法确定：
+\begin{itemize}[noitemsep]
+    \item 多少力来自外势 V
+    \item 多少力来自交互势 Φ
+\end{itemize}
+
+\textbf{类比}：测量物体加速度只能得到合力，无法确定各分力。
+
+\subsubsection{为什么约束无效？}
+
+\begin{table}[h]
+\centering
+\caption{约束效果分析}
+\begin{tabular}{lll}
+\toprule
+\textbf{约束} & \textbf{作用} & \textbf{为什么无效} \\
+\midrule
+$V(0)=0$ & 固定 V 的常数项 & 不影响梯度 $\nabla V$ \\
+$\Phi(r_{\text{ref}})=0$ & 固定 Φ 的常数项 & 不影响梯度 $\nabla\Phi$ \\
+梯度正则化 & 限制梯度大小 & 不能保证正确方向 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{需要的约束}：直接约束势函数的\textbf{形状}，而非常数。
+
+%==============================================================================
+\section{结论与建议}
+%==============================================================================
+
+\subsection{Gate-1 评估}
+
+\begin{table}[h]
+\centering
+\caption{Gate-1 评估结果}
+\begin{tabular}{lccc}
+\toprule
+\textbf{标准} & \textbf{要求} & \textbf{实际} & \textbf{状态} \\
+\midrule
+V 相对误差 & $<10\%$ & 98--162\% & \fail \\
+Φ 相对误差 & $<10\%$ & 19--128\% & \fail \\
+Loss 收敛 & 是 & 是 & \pass\ (但不保证正确) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{tcolorbox}[colback=red!10!white,colframe=red!75!black,title=Gate-1 最终结论]
+\textbf{\fail} — 弱形式 loss 存在根本性 identifiability 问题，当前形式下无法工作。
+\end{tcolorbox}
+
+\subsection{对 Route A 的影响}
+
+\textbf{当前结论}：Route A（NN + Trajectory-free loss）在纯弱形式下\textbf{不可行}。
+
+\subsection{可能的修复方向}
+
+\begin{enumerate}
+    \item \textbf{RKHS 正则化}：论文提到的 "automatic reproducing kernel" 可能提供 identifiability
+    \item \textbf{多系统联合学习}：不同 V 的系统共享 Φ，增加约束
+    \item \textbf{部分已知信息}：假设 V 已知，仅学习 Φ
+    \item \textbf{强约束}：势函数参数化（如已知函数形式，仅学参数）
+\end{enumerate}
+
+\subsection{建议的下一步}
+
+\begin{table}[h]
+\centering
+\caption{下一步任务优先级}
+\begin{tabular}{llp{6cm}l}
+\toprule
+\textbf{优先级} & \textbf{任务} & \textbf{说明} & \textbf{预期效果} \\
+\midrule
+P0 & MVP-1.3: Φ-only 简化 & 假设 V 完全已知 & 消除一半 trade-off \\
+P1 & RKHS 正则化 & 实现 automatic kernel & 可能提供 identifiability \\
+P1 & 多系统联合 & 共享 Φ 学习 & 增加约束 \\
+P2 & Route B: Kernel & 替代方案 & 理论保障更好 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+%==============================================================================
+\section{附录}
+%==============================================================================
+
+\subsection{关键公式推导}
+
+\textbf{正确的弱形式 loss}（从 Itô 引理推导）：
+
+\begin{equation}
+R = \underbrace{\langle |\nabla V + \nabla\Phi * \mu|^2, \mu \rangle \Delta t}_{J_{\text{diss}}} - \underbrace{\frac{\sigma^2}{2} \langle \Delta V + \Delta\Phi * \mu, \mu \rangle \Delta t}_{J_{\text{lap}}} + \underbrace{[E(t+\Delta t) - E(t)]}_{dE} = 0
+\end{equation}
+
+\textbf{能量定义}：
+\begin{equation}
+E(t) = \langle V, \mu_t \rangle + \langle \Phi * \mu_t, \mu_t \rangle = \frac{1}{N} \sum_i V(X_t^i) + \frac{1}{N^2} \sum_{i,j} \Phi(X_t^i - X_t^j)
+\end{equation}
+
+\subsection{代码文件索引}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{文件} & \textbf{说明} \\
+\midrule
+\texttt{core/trajectory\_free\_loss.py} & Loss 函数（已修正） \\
+\texttt{core/nn\_models.py} & 神经网络模型 \\
+\texttt{core/sde\_simulator.py} & SDE 模拟器 \\
+\texttt{scripts/train\_nn.py} & 训练脚本 \\
+\texttt{scripts/train\_nn\_constrained.py} & 约束版训练脚本 \\
+\texttt{scripts/verify\_loss\_formula.py} & Loss 验证脚本 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\vspace{2em}
+\hrule
+\vspace{1em}
+\begin{center}
+\textit{报告生成时间：2026-01-28} \\
+\textit{总实验数：6} \\
+\textit{总耗时：约 4 小时}
+\end{center}
+
+\end{document}
