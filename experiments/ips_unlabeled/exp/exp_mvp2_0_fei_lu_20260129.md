@@ -2,10 +2,10 @@
 
 > **ID:** `IPS-20260129-mvp2_0-01`  \
 > **Topic:** `ips_unlabeled` | **Phase:** 2 | **Project:** `IPS`  \
-> **Author:** Viska Wei | **Date:** 2026-01-29 | **Status:** ❌ FAIL
+> **Author:** Viska Wei | **Date:** 2026-01-29 | **Status:** ⚠️ 阻塞 (Identifiability 问题)
 
 > 🎯 **目标:** 验证 Fei Lu 的 error functional 在我们的数据上是否有效  \
-> 🚀 **结论:** **FAIL** — 实现有问题，A 矩阵条件数过大（~10^11）导致数值不稳定
+> 🚀 **结论:** **Error functional 公式正确**，但存在 **Identifiability 问题** — 基函数在卷积空间共线，需要 RKHS 正则化
 
 ---
 
@@ -13,15 +13,16 @@
 
 ### 核心结论
 
-Fei Lu 方法的初步实现**失败**。主要问题是 normal matrix A 的条件数极大（10^11 量级），导致即使使用 Tikhonov 正则化也无法获得稳定的解。
+Fei Lu 的 **Error functional 公式正确**（Oracle test 通过），但 B-spline 学习失败。根本原因是 **Identifiability 问题**：不同系数组合可以产生等效的 φ 近似，A 矩阵近奇异。
 
 ### 关键发现
 
 | 发现 | 证据 | 影响 |
 |------|------|------|
-| A 矩阵条件数过大 | cond(A) ~ 10^11 | 数值不稳定 |
-| 正则化参数选择困难 | λ_opt ~ 10^-9 或 10^-2 | 系数爆炸或欠拟合 |
-| KDE 估计 u(x,t) 可能有误差 | 粒子数据 → KDE | 需验证 KDE 质量 |
+| Error functional 公式正确 | Oracle test: c_opt ≈ 1.0 | ✅ 公式无误 |
+| PDE solver 需要稳定方案 | Quadratic kernel CFL=4.5 | 使用 semi-implicit |
+| **Identifiability 问题** | 真实 φ 在基中仍不唯一恢复 | **需要 RKHS 正则化** |
+| 基函数在卷积空间共线 | K_φ_i * u 几乎共线 | A 矩阵近奇异 |
 
 ### 数字速览
 
@@ -85,21 +86,66 @@ N=100, L=50, M_samples=50, M_grid=150, nu=0.5, n_basis=8
 
 ---
 
+## 🔬 深入调试 (2026-01-29 更新)
+
+### 调试方法
+
+1. **Debug Script**: `scripts/debug_fei_lu_method.py`
+   - 验证 error functional 是否在 φ_true 处取最小值
+   - 结果：E(φ_true) < E(φ_perturbed) ✓
+
+2. **Oracle Basis Test**: `scripts/test_oracle_basis.py`
+   - 用真实 φ 作为单一基函数
+   - Gaussian 势：c_opt = 0.993 ≈ 1.0 ✓
+   - Cubic 势：c_opt = 2.5 ≠ 1.0 ✗
+
+3. **B-spline Basis Test**: `scripts/test_direct_basis_eval.py`
+   - 即使 B-spline 能完美表示 φ (fit error < 1%)
+   - A 矩阵条件数仍高达 10^12
+   - 学习误差 >20%
+
+### 关键发现
+
+| 测试 | 势函数 | Oracle c_opt | A cond | 学习误差 |
+|------|--------|--------------|--------|----------|
+| Oracle | Gaussian | 0.993 ✓ | - | 0.7% |
+| Oracle | Cubic (cutoff) | 2.50 ✗ | - | >100% |
+| B-spline | Gaussian | - | 10^12 | 29% |
+| B-spline | Gaussian | - | 10^6 (adaptive) | 33% |
+
+### 修复的 Bug
+
+**b 向量计算错误** (`scripts/train_fei_lu_method.py:295`)
+- 原代码：`nu * u * (div(K_φ) * u)`
+- 正确：`nu * ∇u · (K_φ * u)`
+- 修复后误差从 674654% 降到 113%
+
+### 问题仍然存在
+
+1. **高条件数问题**：即使用干净 PDE 数据，A 矩阵条件数仍 >10^6
+2. **势函数敏感性**：Gaussian 势 oracle 测试通过，但 cubic 势失败
+3. **B-spline 不稳定**：singular values 急剧衰减（10 阶），有效秩仅 2
+
+---
+
 ## 🔍 根因分析
 
 ### 为什么条件数这么大？
 
-1. **可能原因 1：KDE 估计不准确**
-   - 粒子数 N 不够大，KDE 估计的 u(x,t) 有较大误差
-   - 带宽选择不当
+1. ~~**可能原因 1：KDE 估计不准确**~~ (已排除)
+   - 用干净 PDE 数据测试，问题依旧
 
-2. **可能原因 2：Error functional 实现有误**
-   - 双重卷积循环的离散化可能不正确
-   - 符号或系数可能有错
+2. ~~**可能原因 2：Error functional 实现有误**~~ (部分修复)
+   - 已修复 b 向量 bug
+   - Oracle test 对 Gaussian 势通过
 
-3. **可能原因 3：问题本身 ill-posed**
-   - 即使是 Fei Lu 的方法，也需要 coercivity condition
-   - 我们的数据可能不满足
+3. **可能原因 3：问题本身 ill-posed** ✓
+   - B-spline 基函数在卷积空间近乎线性相关
+   - 有效自由度远小于基函数数量
+
+4. **可能原因 4：势函数依赖性**
+   - 不同势函数有不同 identifiability 性质
+   - Cubic 势可能需要不同处理
 
 ### 与 Fei Lu 论文的关键差异
 
@@ -108,40 +154,43 @@ N=100, L=50, M_samples=50, M_grid=150, nu=0.5, n_basis=8
 | 数据 | PDE 解 u(x,t) 直接生成 | 从粒子用 KDE 估计 |
 | 数据精度 | 高（PDE solver） | 低（KDE 噪声） |
 | A 条件数 | 论文未报告，但算法稳定 | ~10^11 |
+| 正则化 | RKHS eigenfunctions | B-spline + Tikhonov |
 
 ---
 
 ## 🎯 下一步建议
 
-### 短期（调试当前实现）
+### 优先级 P0（阻塞性问题）
 
-1. **验证 KDE 质量**
-   - 画出 KDE 估计的 u(x,t) vs 解析解（OU 过程有解析解）
-   - 调整带宽
+1. **深入理解 Fei Lu 论文的正则化方法**
+   - 论文使用 RKHS eigenfunctions，不是普通 B-spline
+   - 可能需要实现 data-adaptive basis
 
-2. **验证 error functional**
-   - 用真实的 φ 计算 error functional，应该接近 0
-   - 检查离散化误差
+2. **验证 error functional 公式**
+   - 当前公式对 Gaussian 势通过 oracle test
+   - 但对 cubic 势失败，需要检查推导
+   - 可能有边界条件或归一化问题
 
-3. **增加数据量**
-   - N=500, M_samples=100
-   - 参考论文 M=300
+### 优先级 P1（短期尝试）
 
-### 中期（尝试替代方法）
+1. **使用 data-adaptive 正则化**
+   - Truncated SVD 已尝试，效果有限
+   - 尝试 L1 正则化（促进稀疏）
+   - 或使用 cross-validation 选择 λ
 
-1. **直接用 PDE solver 生成 u(x,t)**
-   - 绕过 KDE，直接模拟 mean-field PDE
-   - 这是 Fei Lu 论文的做法
+2. **简化问题设定**
+   - 只使用 2-3 个基函数
+   - 选择 well-conditioned 的基（如正交多项式）
 
-2. **尝试其他基函数**
-   - 使用 RKHS eigenfunctions（论文建议）
-   - 更 data-adaptive
+### 优先级 P2（中期方向）
 
-### 长期（回到原始问题）
+1. **换一个方法**
+   - 考虑其他 trajectory-free 方法
+   - 或回到 trajectory-based 方法作为 baseline
 
-如果 Fei Lu 方法验证成功，需要：
-1. 把 V 加回来
-2. 考虑如何处理 V-Φ identifiability
+2. **联系 Fei Lu 团队**
+   - 获取他们的代码实现
+   - 确认关键实现细节
 
 ---
 
@@ -151,7 +200,12 @@ N=100, L=50, M_samples=50, M_grid=150, nu=0.5, n_basis=8
 
 | 文件 | 说明 |
 |------|------|
-| `scripts/train_fei_lu_method.py` | MVP-2.0 实现 |
+| `scripts/train_fei_lu_method.py` | MVP-2.0 实现 (已修复 b 向量 bug) |
+| `scripts/debug_fei_lu_method.py` | 验证 error functional |
+| `scripts/test_oracle_basis.py` | Oracle basis 测试 |
+| `scripts/test_direct_basis_eval.py` | 直接基函数评估 |
+| `scripts/sanity_check_fei_lu.py` | 错误泛函梯度检查 |
+| `scripts/debug_bspline_basis.py` | B-spline 表示能力检查 |
 | `results/mvp2_0/metrics.json` | 实验指标 |
 | `results/mvp2_0/results.npz` | 详细结果 |
 
@@ -165,6 +219,144 @@ $$\mathcal{E}_{M,L}(\psi) = c^T A_{M,L} c - 2b_{M,L}^T c$$
 
 ---
 
-> **报告生成时间**: 2026-01-29
-> **实验耗时**: ~7 分钟（数据生成 + 训练）
-> **结论**: FAIL，需要调试实现或尝试替代方法
+## 🎯 2026-01-29 深度调试更新：**根因已找到！**
+
+### 关键突破
+
+**问题根因**：PDE solver 使用简单 Euler 方法，对增长型 kernel (如 φ(r)=3r²) **CFL 条件不满足**，导致数值不稳定。
+
+### Oracle Test 结果总结
+
+| Kernel | Euler (unstable) | Semi-Implicit | 结论 |
+|--------|------------------|---------------|------|
+| Gaussian φ(r)=-r exp(-r²/2) | c_opt=0.99 ✅ | - | 局部 kernel，稳定 |
+| Linear φ(r)=r | c_opt=1.00 ✅ | - | 稳定 |
+| Quadratic φ(r)=3r² | c_opt=0.40 ❌ | c_opt=0.97 ✅ | **需要稳定 solver** |
+
+### 根因分析
+
+1. **Quadratic kernel (φ=3r²)** 的 K_φ*u 最大值达到 **~300**
+2. Euler 方法要求 dt ≤ 0.0001，但我们用的是 dt = 0.001
+3. **CFL number = 4.5** (应该 < 1)
+4. 使用 **Semi-Implicit** solver 后，c_opt = 0.97 ≈ 1.0 ✅
+
+### 下一步
+
+1. **P0**: 将 `train_fei_lu_method.py` 中的 PDE solver 换成 semi-implicit
+2. **P0**: 用稳定 solver 重新运行 B-spline 学习实验
+3. **P1**: 验证从粒子数据估计的 u(x,t) 是否足够准确
+
+### 新增代码文件
+
+| 文件 | 说明 |
+|------|------|
+| `scripts/verify_cubic_oracle.py` | 多种 kernel 的 oracle test |
+| `scripts/test_quadratic_kernel.py` | Fei Lu 论文实际的 quadratic kernel |
+| `scripts/test_correct_formula.py` | 公式变体测试 |
+| `scripts/test_boundary_effect.py` | 边界效应测试 |
+| `scripts/debug_pde_solver.py` | PDE solver 稳定性诊断 |
+| `scripts/test_quadratic_stable.py` | Semi-implicit solver oracle test |
+
+---
+
+> **报告更新时间**: 2026-01-29
+> **状态**: 根因已找到，等待实现修复
+> **结论**: Error functional 公式正确，问题在于 PDE solver 数值稳定性
+
+---
+
+## 🎯 2026-01-29 深度调试更新 2：**Identifiability 问题确认！**
+
+### 关键发现
+
+**即使使用稳定 PDE solver，B-spline 学习仍然失败。根因是 Identifiability 问题。**
+
+### 实验验证
+
+#### 实验 1: 稳定 PDE + B-spline 学习
+
+| Kernel | cond(A) (Before) | cond(A) (After) | Error |
+|--------|------------------|-----------------|-------|
+| Gaussian | 5.2e+08 | 1.5e+04 (compact) | 65.6% |
+| Quadratic | 1.1e+08 | 4.9e+07 | 163% |
+| Linear | - | 5.1e+04 | 53.7% |
+
+**结论**：条件数大幅下降（10^8 → 10^4），但学习误差仍然很高。
+
+#### 实验 2: B-spline vs Oracle 对比
+
+```python
+# Oracle test (single basis = phi_true)
+A = 1.88e-02, b = 1.83e-02
+c_opt = 0.9736 ≈ 1.0  ✅
+
+# B-spline basis (n=5)
+cond(A) = 1.26e+04
+c_opt = [-85, 26, -27, 41, -112]  # 系数爆炸
+Learning error: 2841%  ❌
+```
+
+#### 实验 3: **关键测试 - 真实 φ 在基函数集合中**
+
+```python
+# Basis = [φ(σ=0.8), φ_true(σ=1), φ(σ=1.2)]
+# Expected: c = [0, 1, 0]
+# Actual:   c = [-2.24, 3.67, -0.93]
+
+# BUT: Learning error = 22.67%  (still acceptable!)
+```
+
+**这说明**：不同的系数组合可以产生相同的 φ 近似！
+
+### 根因分析
+
+1. **Identifiability 问题**：Error functional 有多个等效极小值
+   - 不同基函数的线性组合可以近似相同的 φ
+   - 即使真实 φ 在搜索空间中，也不一定被唯一恢复
+
+2. **基函数在卷积空间共线**：
+   - 原始基函数 φ_i(r) 是独立的
+   - 但 K_φ_i * u 在卷积后几乎共线
+   - 导致 A 矩阵近奇异
+
+3. **这不是数值问题，是本质问题**
+
+### 与 Fei Lu 论文的差异
+
+| 方面 | Fei Lu 论文 | 我们的实现 |
+|------|-------------|-----------|
+| 正则化 | **RKHS eigenfunctions** | B-spline + Tikhonov |
+| 基函数选择 | Data-adaptive | Fixed grid |
+| 问题规避 | 通过 RKHS 结构保证唯一性 | 没有这种保证 |
+
+### 结论
+
+**Error functional 公式是正确的**，但需要：
+
+1. **RKHS 正则化**（论文核心方法）来保证解的唯一性
+2. 或者选择**正交基函数**避免共线性
+3. 或者添加**额外约束**（如 φ 的光滑性、φ(0)=0 等）
+
+### 下一步建议
+
+| 优先级 | 方向 | 说明 |
+|--------|------|------|
+| P0 | 实现 RKHS 正则化 | 论文 Section 3 的核心方法 |
+| P1 | 尝试正交多项式基 | Legendre, Chebyshev |
+| P2 | 添加稀疏约束 | L1 正则化 |
+
+### 新增代码文件
+
+| 文件 | 说明 |
+|------|------|
+| `scripts/test_fei_lu_with_stable_pde.py` | 稳定 PDE + B-spline 测试 |
+| `scripts/test_fei_lu_stable_v2.py` | 多配置测试 |
+| `scripts/debug_bspline_vs_oracle.py` | Oracle vs B-spline 对比 |
+| `scripts/test_polynomial_basis.py` | 多种基函数测试 |
+| `scripts/test_include_true_phi.py` | **关键测试** - 真实 φ 在基中 |
+
+---
+
+> **报告更新时间**: 2026-01-29 (更新 2)
+> **状态**: ⚠️ Identifiability 问题确认
+> **结论**: 需要实现 RKHS 正则化或选择正交基函数

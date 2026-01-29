@@ -1,6 +1,6 @@
 # 🧠 IPS Unlabeled Hub
-> **ID:** EXP-20260128-ips_unlabeled-hub | **Status:** ⚠️ 遇阻 → 📖 理论调研
-> **Date:** 2026-01-28 | **Update:** 2026-01-28 (Fei Lu 文献调研)
+> **ID:** EXP-20260128-ips_unlabeled-hub | **Status:** ⚠️ 阻塞 (Identifiability 问题)
+> **Date:** 2026-01-28 | **Update:** 2026-01-29 (MVP-2.0 Identifiability 问题确认)
 
 | # | 💡 共识[抽象洞见] | 证据 | 决策 |
 |---|----------------------------|----------------|------|
@@ -11,7 +11,10 @@
 | K5 | ❌ **理论确认**：同时学习 V 和 Φ 一般不可行 | Fei Lu 论文: "not possible in general to identify both" | **必须固定其中之一** |
 | K6 | ✅ **理论支持**：RKHS 正则化是必须的 | Fei Lu: "inverse problem is ill-posed" | RKHS Tikhonov 正则化 |
 | K7 | ✅ **理论支持**：Coercivity condition 保证 identifiability | Li & Lu 2021: ergodic → coercivity | 检查系统是否 ergodic |
-| K8 | ⚠️ **实验发现**：Fei Lu 方法直接实现有问题 | MVP-2.0: A 条件数 ~10^11 | 需要调试 KDE 或 error functional |
+| K8 | ✅ **修复**：PDE solver 需要 semi-implicit 方案 | Quadratic kernel CFL=4.5 | ✅ 已修复 |
+| K9 | ✅ **确认**：Error functional 公式正确 | Oracle test: c_opt=0.97≈1.0 (稳定 solver) | 公式无误 |
+| K10 | ⚠️ **关键发现**：**B-spline 在卷积空间共线** | 真实 φ 在基中仍不唯一恢复 | **需要 RKHS 正则化** |
+| K11 | ⚠️ **Identifiability**：不同系数可产生等效 φ | c=[0,1,0] vs c=[-2.2,3.7,-0.9] 误差相近 | 解不唯一 |
 
 **🦾 现阶段信念 [≤10条，写"所以呢"]**
 - **信念1**：标准方法（MLE/MSE）需要轨迹信息，无法直接应用 → 必须开发 trajectory-free 方法
@@ -25,21 +28,20 @@
 - **信念9** ✅ (理论确认)：**必须固定 V 或 Φ 之一** → Fei Lu: "not possible in general to identify both potentials"
 - **信念10** ✅ (理论确认)：**必须使用 RKHS 正则化** → Fei Lu: "inverse problem is ill-posed, regularization required"
 
-**👣 下一步最有价值** (根据 Fei Lu 文献调研 2026-01-28 更新)
-- 🔴 **P0**：**简化问题设定**（最高优先，理论要求）
-  - ✅ **固定 V，只学 Φ** — Fei Lu 理论证明同时学习不可行
-  - 或: 使用已知 Φ 的系统验证方法论
-- 🔴 **P0**：**实现 RKHS 正则化**（必须，非可选）
-  - 参考: [arXiv:2205.11006](https://arxiv.org/abs/2205.11006) — Data adaptive RKHS Tikhonov
-  - Fei Lu: "inverse problem is ill-posed → divergent estimators without regularization"
-- 🔴 **P0**：**阅读 Identifiability 论文**
-  - [ ] [arXiv:2106.05565](https://arxiv.org/abs/2106.05565) — identifiability 的详细数学表述
-  - [ ] [arXiv:2011.10480](https://arxiv.org/abs/2011.10480) — coercivity condition
-- 🟡 **P1**：**验证 Coercivity Condition** — 检查系统是否 ergodic
-  - Coercivity ⟺ 积分算子严格正定 ⟺ identifiability
-- 🟡 **P1**：**多系统联合学习**：不同 V 的系统共享 Φ → NSF proposal 项目之一
-  - 参考: [arXiv:2402.08412](https://arxiv.org/abs/2402.08412)
-- 🟢 **P2**：调整实验设定 (M↑, σ↓, N↑) — 但需先解决 identifiability
+**👣 下一步最有价值** (2026-01-29 更新 - MVP-2.0 Identifiability 分析完成)
+- 🔴 **P0**：**实现 RKHS 正则化**（阻塞性问题，必须解决）
+  - ✅ Error functional 公式已验证正确
+  - ✅ PDE solver 已修复 (semi-implicit)
+  - ❌ B-spline 基函数在卷积空间共线 → **需要 data-adaptive basis**
+  - 参考: Fei Lu 论文 Section 3 — RKHS eigenfunctions
+- 🔴 **P0**：**尝试正交基函数** (快速尝试)
+  - Legendre 多项式、Chebyshev 多项式
+  - 目标：避免基函数共线性
+- 🟡 **P1**：**阅读 RKHS 实现细节**
+  - [ ] [arXiv:2205.11006](https://arxiv.org/abs/2205.11006) — Data adaptive RKHS Tikhonov
+  - [ ] 理解 "eigenfunctions of integral operator" 的具体计算
+- 🟡 **P1**：**验证从粒子数据估计 u(x,t)** — 当前用干净 PDE 数据，需测试 KDE
+- 🟢 **P2**：**多系统联合学习** — 不同 V 的系统共享 Φ
 
 > **权威数字**：Best=-；Baseline=-；Δ=-；条件=待定义
 
