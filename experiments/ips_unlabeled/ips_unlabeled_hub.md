@@ -1,6 +1,6 @@
 # 🧠 IPS Unlabeled Hub
-> **ID:** EXP-20260128-ips_unlabeled-hub | **Status:** ⚠️ 遇阻
-> **Date:** 2026-01-28 | **Update:** 2026-01-28 (MVP-1.0 失败)
+> **ID:** EXP-20260128-ips_unlabeled-hub | **Status:** ⚠️ 遇阻 → 📖 理论调研
+> **Date:** 2026-01-28 | **Update:** 2026-01-28 (Fei Lu 文献调研)
 
 | # | 💡 共识[抽象洞见] | 证据 | 决策 |
 |---|----------------------------|----------------|------|
@@ -8,6 +8,10 @@
 | K2 | ✅ 确认：NN 可稳定计算梯度和 Laplacian (AD) | MVP-1.0: 无数值问题 | AD 方案可继续使用 |
 | K3 | ❌ **确认**：V-Φ 可相互补偿导致 loss=0 | MVP-1.1: 添加约束后仍失败 | 约束方法无效 |
 | K4 | ✅ **新发现**：原 loss 公式系数有误 | MVP-1.2: 正确公式是 J_diss - (σ²/2)J_lap + dE = 0 | 但修正后仍无法学习 |
+| K5 | ❌ **理论确认**：同时学习 V 和 Φ 一般不可行 | Fei Lu 论文: "not possible in general to identify both" | **必须固定其中之一** |
+| K6 | ✅ **理论支持**：RKHS 正则化是必须的 | Fei Lu: "inverse problem is ill-posed" | RKHS Tikhonov 正则化 |
+| K7 | ✅ **理论支持**：Coercivity condition 保证 identifiability | Li & Lu 2021: ergodic → coercivity | 检查系统是否 ergodic |
+| K8 | ⚠️ **实验发现**：Fei Lu 方法直接实现有问题 | MVP-2.0: A 条件数 ~10^11 | 需要调试 KDE 或 error functional |
 
 **🦾 现阶段信念 [≤10条，写"所以呢"]**
 - **信念1**：标准方法（MLE/MSE）需要轨迹信息，无法直接应用 → 必须开发 trajectory-free 方法
@@ -17,19 +21,25 @@
 - **信念5** ❌：~~添加约束（如 V(0)=0）可保证唯一性~~ → **MVP-1.1 表明简单约束无效**
 - **信念6**：高维d和大规模N时，需要GPU并行和策略性采样 → 影响训练流程设计
 - **信念7** ❗：Loss=0 不保证正确解 → **验证 loss 设计时必须检查势函数形状，不能只看 loss 值**
-- **新信念8** ❗：原论文 loss 公式有误 → **正确公式是 J_diss - (σ²/2)J_lap + dE = 0，但即使修正也无法解决 identifiability**
-- **新信念9** ❓：可能需要**多系统联合学习**或**已知 V 的简化问题**才能学习 Φ
+- **信念8** ❗：原论文 loss 公式有误 → **正确公式是 J_diss - (σ²/2)J_lap + dE = 0，但即使修正也无法解决 identifiability**
+- **信念9** ✅ (理论确认)：**必须固定 V 或 Φ 之一** → Fei Lu: "not possible in general to identify both potentials"
+- **信念10** ✅ (理论确认)：**必须使用 RKHS 正则化** → Fei Lu: "inverse problem is ill-posed, regularization required"
 
-**👣 下一步最有价值** (根据 Expert Review 2026-01-28 调整)
-- 🔴 **P0**：**调整实验设定**（最高优先）：当前 N=5, M=30, σ=0.1 设定下误差太大，无法做有价值的估计
-  - ↗️ 增加样本量 M: 200 → 1000+
-  - ↘️ 降低噪声 σ: 0.1 → 0.01
-  - ↗️ 增加粒子数 N: 5-10 → 50-100
-  - 📖 参考论文中成功实验的配置
-- 🔴 **P0**：**深入理论分析**：阅读论文中关于 identifiability 的详细讨论，理解唯一解条件
-- 🟡 **P1**：考虑 **RKHS 正则化**（automatic kernel）→ 我去年的工作，计划中的另一方法
-- 🟡 **P1**：考虑 **多系统联合学习**：不同 V 的系统共享 Φ → NSF proposal 项目之一
-- 🟢 **P2**：Route B (Kernel 方法) 作为替代方案 → MVP-2.0
+**👣 下一步最有价值** (根据 Fei Lu 文献调研 2026-01-28 更新)
+- 🔴 **P0**：**简化问题设定**（最高优先，理论要求）
+  - ✅ **固定 V，只学 Φ** — Fei Lu 理论证明同时学习不可行
+  - 或: 使用已知 Φ 的系统验证方法论
+- 🔴 **P0**：**实现 RKHS 正则化**（必须，非可选）
+  - 参考: [arXiv:2205.11006](https://arxiv.org/abs/2205.11006) — Data adaptive RKHS Tikhonov
+  - Fei Lu: "inverse problem is ill-posed → divergent estimators without regularization"
+- 🔴 **P0**：**阅读 Identifiability 论文**
+  - [ ] [arXiv:2106.05565](https://arxiv.org/abs/2106.05565) — identifiability 的详细数学表述
+  - [ ] [arXiv:2011.10480](https://arxiv.org/abs/2011.10480) — coercivity condition
+- 🟡 **P1**：**验证 Coercivity Condition** — 检查系统是否 ergodic
+  - Coercivity ⟺ 积分算子严格正定 ⟺ identifiability
+- 🟡 **P1**：**多系统联合学习**：不同 V 的系统共享 Φ → NSF proposal 项目之一
+  - 参考: [arXiv:2402.08412](https://arxiv.org/abs/2402.08412)
+- 🟢 **P2**：调整实验设定 (M↑, σ↓, N↑) — 但需先解决 identifiability
 
 > **权威数字**：Best=-；Baseline=-；Δ=-；条件=待定义
 
@@ -132,6 +142,10 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | **I6** | **V-Φ 存在 identifiability 问题** ❗ | 不同配置下误差分布不同但都失败 | 弱形式 loss 可能有多个使其=0的解 | **需要额外约束** | MVP-1.0 |
 | **I7** | **即使固定 V，Φ 仍学不对** ❗ | Φ-only 误差 78%，loss=0.018 | 问题不仅是 V-Φ trade-off | **loss 公式本身可能有问题** | MVP-1.0b |
 | **I8** | AD 计算稳定可靠 ✅ | 无数值爆炸/消失 | PyTorch autograd 工作正常 | AD 方案可继续使用 | MVP-1.0 |
+| **I9** | **同时学 V 和 Φ 理论上不可行** 📖 | Fei Lu 理论证明 | "not possible in general to identify both" | **必须固定其中之一** | session-2 |
+| **I10** | **逆问题 ill-posed，必须正则化** 📖 | Fei Lu: estimators diverge w/o regularization | RKHS 空间中才有唯一解 | **实现 RKHS Tikhonov** | session-2 |
+| **I11** | **Coercivity condition 保证 identifiability** 📖 | 积分算子严格正定 ⟺ 唯一解 | Ergodic 系统满足 coercivity | **检查系统是否 ergodic** | session-2 |
+| **I12** | **Weighted L² space 优于 unweighted** 📖 | Fei Lu 实验结果 | Data-adaptive measure 更准确 | 考虑 weighted loss | session-2 |
 
 ---
 
@@ -176,12 +190,16 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | 🗺️ Roadmap | `./ips_unlabeled_roadmap.md` | Decision Gates + MVP 执行 |
 | 📗 Experiments | `./exp_*.md` | 单实验报告 |
 | 📊 Prompts | `./prompts/` | Coding Prompt |
+| 💬 Sessions | `./sessions/` | 对话记录 |
+| └─ Session 1 | `./sessions/1.md` | 初始问题框架 |
+| └─ Session 2 | `./sessions/2_fei_lu_literature.md` | Fei Lu 文献调研 |
 
 ---
 
 ## 8) 🔬 Fei Lu 论文综述（文献调研）
 
 > **来源**: [Fei Lu @ JHU](https://math.jhu.edu/~feilu/research.html) | **调研日期**: 2026-01-28
+> **详细 Session**: `./sessions/2_fei_lu_literature.md`
 
 ### 8.1 关键论文列表
 
@@ -189,58 +207,160 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 |---|------|------|---------|-------------|
 | **P1** | [Learning interaction kernels in mean-field equations](https://arxiv.org/abs/2010.15694) (Lang & Lu, SIAM J. Sci. Comput.) | 2022 | Mean-field PDE + 分布数据 | **最相关**：与我们的 trajectory-free 设定一致 |
 | **P2** | [Identifiability of interaction kernels](https://arxiv.org/abs/2106.05565) (Lang & Lu, FODS) | 2023 | **Identifiability 理论** | 核心理论：解释为什么 loss=0 不保证唯一解 |
-| **P3** | [Learning in stochastic systems from multiple trajectories](https://arxiv.org/abs/2007.15174) (Lu, Maggioni & Tang, Found. Comput. Math.) | 2021 | SDE + 轨迹数据 | 参考：convergence rate 分析框架 |
-| **P4** | [Heterogeneous systems](https://arxiv.org/abs/1910.04832) (Lu et al., JMLR) | 2021 | 异质系统 | 参考：多系统联合学习 |
+| **P3** | [On the coercivity condition](https://arxiv.org/abs/2011.10480) (Li & Lu, Stoch. Dynamics) | 2021 | **Coercivity → Identifiability** | 核心理论：何时有唯一解 |
+| **P4** | [On the identifiability of interaction functions](https://www.sciencedirect.com/science/article/pii/S0304414920303951) (Li, Lu, Maggioni et al., SPA) | 2021 | 系统性 identifiability 分析 | 理论基础 |
+| **P5** | [Nonparametric learning of kernels in nonlocal operators](https://arxiv.org/abs/2205.11006) (Lu, An, Yu) | 2023 | **RKHS Tikhonov 正则化** | 方法参考：必须的正则化 |
+| **P6** | [Network inference](https://arxiv.org/abs/2402.08412) (Lang, Wang, Lu, Maggioni) | 2024 | 多系统联合学习 | 参考：共享 Φ 的多系统 |
 
-### 8.2 Identifiability 核心结论（来自 P2）
+### 8.2 核心理论发现
 
-**问题**：Quadratic loss 何时有唯一最小值？
+#### ❌ 关键否定结论
+> **"It is not possible, in general, to identify both the confining and interaction potentials from a single-particle observation."**
 
-**关键结论**：
-1. Identifiable function space = **RKHS closure** of the integral operator of inversion
-2. Finite particles vs Infinite particles 有**关键区别**
-3. Inverse problem is **ill-posed** → **必须正则化**
-4. **Weighted L² space** 比 unweighted L² space 产生更准确的估计
+这直接解释了我们 MVP-1.0/1.1/1.2 的失败：**同时学习 V 和 Φ 理论上不可行**。
 
-### 8.3 Convergence Rate（来自 P1, P3）
+#### Identifiability 条件 (来自 P2, P3, P4)
 
-**Mean-field case (P1)**：
-- 收敛速率 = **数值积分器的阶** (numerical integrator's order)
-- 经验误差 E_{M,∞} 收敛速率: `2αs/(s+1)`
-- Δt → 0 时最优收敛
+| 条件 | 数学表述 | 物理意义 |
+|------|---------|---------|
+| **Coercivity** | 积分算子 K 严格正定 | 数据足够"丰富" |
+| **Ergodicity** | 系统是遍历的 | 长时间后覆盖状态空间 |
+| **RKHS 正则化** | 在 RKHS 闭包中优化 | 限制解空间保证唯一性 |
 
-**SDE case (P3)**：
-- 收敛速率 = **1D 非参数回归的 min-max rate**
-- **独立于状态空间维度**（关键优势！）
-- 离散化误差 = O(Δt^{1/2})
+**关键定理** (Li & Lu 2021):
+> "Coercivity condition is sufficient for identifiability and becomes **necessary** when N → ∞."
 
-**理论分析方向**：convergence rate as M → ∞ (样本量增加)
+### 8.3 Coercivity Condition 详解
 
-### 8.4 成功案例（来自 P1）
+**定义**: Coercivity ⟺ 积分算子严格正定
+- 积分核 K(r,r') 必须是 **strictly positive definite**
+- 证明方法: **Müntz type theorems**
+
+**何时成立**:
+- 系统是 **ergodic** (遍历的)
+- Interaction function 满足一定条件使系统 ergodic
+
+**失败时**:
+- Loss 有多个使其 = 0 的解
+- Estimator 发散 (divergent)
+- 无法唯一确定 interaction function
+
+### 8.4 RKHS 正则化 (来自 P5)
+
+**问题**: Kernel learning 是 ill-posed/ill-defined inverse problem
+- Modeling errors 或 measurement noises 导致 estimators **发散**
+
+**解决方案**: **Data adaptive RKHS Tikhonov regularization**
+- 在 RKHS 中优化而非普通 L²
+- 使用 data-adaptive 的 reproducing kernel
+- Weighted L² space 优于 unweighted
+
+### 8.5 收敛速率
+
+| 设定 | 收敛速率 | 来源 |
+|------|---------|------|
+| Mean-field (分布数据) | = 数值积分器的阶 | P1 |
+| SDE (轨迹数据) | 1D 非参数回归 min-max rate | P3 |
+| 离散化误差 | O(Δt^{1/2}) | P3 |
+
+**关键**: 收敛速率**独立于状态空间维度** (只依赖 interaction 的内在维度)
+
+### 8.6 成功案例 (来自 P1)
 
 | 例子 | Kernel 类型 | 结果 |
 |------|------------|------|
-| Opinion dynamics | Piecewise linear | ✅ 成功：highly accurate solutions |
-| Granular media | Quadratic (smooth) | ✅ 成功：optimal rate of convergence |
-| Aggregation-diffusion | Repulsive-attractive | ✅ 成功：accurate free energy |
+| Opinion dynamics | Piecewise linear | ✅ 成功 |
+| Granular media | Quadratic (smooth) | ✅ 成功 |
+| Aggregation-diffusion | Repulsive-attractive | ✅ 成功 |
 
-**关键**：估计器能 reproduce highly accurate solutions and free energy。
-
-### 8.5 对本项目的启示
+### 8.7 对本项目的启示
 
 | 优先级 | 启示 | 具体行动 |
 |--------|------|---------|
-| 🔴 **P0** | 必须实现 **RKHS 正则化** | 这是 identifiability 的关键，论文核心方法 |
-| 🔴 **P0** | 使用 **weighted L² space** | 比 unweighted 更准确 |
-| 🟡 **P1** | 理论分析方向 | convergence rate as M → ∞ |
-| 🟡 **P1** | 获取 PDF 详细参数 | 需要具体的 N, M, σ 配置 |
+| 🔴 **P0** | **固定 V 或 Φ 之一** | 同时学习理论上不可行 |
+| 🔴 **P0** | **实现 RKHS 正则化** | 这是 identifiability 的必要条件 |
+| 🔴 **P0** | **使用 weighted L² space** | 比 unweighted 更准确 |
+| 🟡 **P1** | **验证 coercivity** | 检查系统是否 ergodic |
+| 🟡 **P1** | **多系统联合学习** | 不同 V 共享 Φ 可能提供额外约束 |
 
-### 8.6 待获取信息
+### 8.8 待阅读论文 PDF
 
-⚠️ **需要阅读论文 PDF**：
-- [ ] P1 中实验的具体参数配置 (N, M, L, σ)
-- [ ] P2 中 identifiability condition 的详细数学表述
-- [ ] P3 中 coercivity condition 的具体形式
+- [ ] [arXiv:2106.05565](https://arxiv.org/abs/2106.05565) — identifiability 的详细数学表述
+- [ ] [arXiv:2011.10480](https://arxiv.org/abs/2011.10480) — coercivity condition 的具体形式
+- [x] [arXiv:2010.15694](https://arxiv.org/abs/2010.15694) — **已详细阅读** (2026-01-28)
+- [ ] [arXiv:2205.11006](https://arxiv.org/abs/2205.11006) — RKHS Tikhonov regularization 实现细节
+
+---
+
+## 9) 📖 Fei Lu 论文详细笔记（2026-01-28 详细阅读）
+
+> **来源**: "Learning interaction kernels in mean-field equations of 1st-order systems of interacting particles" (Lang & Lu, SIAM J. Sci. Comput. 2022)
+
+### 9.1 问题设定差异
+
+**Fei Lu 的 Mean-field 方程（无 V）**:
+$$\partial_t u = \nu \Delta u + \nabla \cdot [u(K_\phi * u)], \quad x \in \mathbb{R}^d, t > 0$$
+
+**我们的 SDE（有 V 和 Φ）**:
+$$dX_t^i = -\nabla V(X_t^i) dt - \frac{1}{N} \sum_j \nabla \Phi(X_t^i - X_t^j) dt + \sigma dB_t^i$$
+
+**关键差异**：
+| 方面 | Fei Lu | 我们 |
+|------|--------|-----|
+| 外势 V | **无** | 有 |
+| 数据 | PDE 解 u(x,t) | 粒子位置快照 |
+| 学习目标 | 只学 φ | 同时学 V 和 Φ |
+
+### 9.2 Error Functional（Eq 2.3）
+
+$$\mathcal{E}(\psi) = \frac{1}{T} \int_0^T \int_{\mathbb{R}^d} \left[ |K_\psi * u|^2 u + 2\partial_t u (\Psi * u) + 2\nu \nabla u \cdot (K_\psi * u) \right] dx\, dt$$
+
+**优势**（Remark 2.5）:
+1. 不需要空间导数 ∇u, Δu
+2. 利用 u(·,t) 是概率密度，可以用 Monte Carlo 近似
+
+### 9.3 成功实验配置（Table 2）
+
+| 参数 | 值 | 备注 |
+|------|-----|------|
+| 空间域 Ω | [-10, 10] | |
+| 时间 T | 1.0 | |
+| 真实解网格 | dt=0.001, dx=20/3000 | 高精度 |
+| 数据网格 | Δx=10dx | M=300 空间点 |
+| 粘性 ν | 0.01-1.0 | 对应 σ²/2 |
+| B-spline 维度 | 3-50 | L-curve 选择 |
+
+### 9.4 成功案例误差
+
+| 例子 | Kernel | ν | L²(ρ̄_T) 误差 | RKHS 误差 |
+|------|--------|---|-------------|-----------|
+| **Cubic** | φ(r)=3r² (smooth) | 1.0 | **1.90%** | 0.43% |
+| Opinion | piecewise linear | 0.1 | 36.74% | 8.10% |
+| Repulsion-attraction | singular | 0.01 | 49.06% | 4.36% |
+
+**关键发现**：smooth kernel 可达 <2% 误差！
+
+### 9.5 Tikhonov 正则化（Section 2.3）
+
+$$\mathcal{E}_\lambda(\psi) = \mathcal{E}(\psi) + \lambda |||\psi|||^2$$
+
+- 正则化范数：RKHS norm 或 H¹ norm
+- λ 选择：**L-curve 方法**（最大化曲率）
+
+### 9.6 收敛速率（Theorem 3.7）
+
+$$\|\hat{\phi}_{n,M,\infty} - \phi\|_{\mathbb{H}} \lesssim (\Delta x)^{\frac{\alpha s}{s+1}}$$
+
+- α = 数值积分器阶（Trapezoidal: α=2）
+- s = approximation error 衰减阶（B-spline degree p 时 s=p）
+
+### 9.7 对 MVP-2.0 的启示
+
+1. **去掉 V**：设 V=0，只学 φ（论文方程本身无 V）
+2. **估计 u(x,t)**：从粒子数据用 KDE 估计
+3. **使用 B-spline**：替代 NN
+4. **实现 Tikhonov**：必须正则化
+5. **参考配置**：M=300, ν=0.1-1.0
 
 ---
 
@@ -252,6 +372,8 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 | 2026-01-28 | 根据 session-1 完善问题树和洞见 | 补充数学推导、物理直觉、计算机验证三个层面的问题 |
 | 2026-01-28 | **Expert Review** 添加 | PI 评审 Phase 1 工作，调整下一步优先级：实验设定调整 > 简化问题 |
 | 2026-01-28 | **Fei Lu 论文综述** 添加 | 文献调研：identifiability 理论、convergence rate、RKHS 正则化 |
+| 2026-01-28 | **Session-2 文献调研** | 深入调研 Fei Lu 论文：coercivity condition、RKHS 正则化必要性、V-Φ 不可同时学习 |
+| 2026-01-28 | **Hub 重大更新** | K5-K7 新增（理论确认）；信念9-10 更新；I9-I12 新增；P0 优先级调整为"固定 V/Φ + RKHS 正则化" |
 
 <details>
 <summary><b>附录：术语表</b></summary>
