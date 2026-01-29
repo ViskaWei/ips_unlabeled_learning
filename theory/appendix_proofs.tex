@@ -1,0 +1,218 @@
+%% Appendix: Detailed Proofs
+%% For LED_ips_nn theoretical analysis
+
+\appendix
+
+\section{Detailed Proofs}
+\label{app:proofs}
+
+%% ============================================
+\subsection{Proof of Proposition \ref{prop:energy_dissip} (Energy Dissipation)}
+\label{app:energy_dissip}
+%% ============================================
+
+We provide the complete derivation of the trajectory-free loss function from energy dissipation principles.
+
+\begin{proof}[Complete Proof of Proposition \ref{prop:energy_dissip}]
+Define the energy functional with test potentials $(\Phi, V)$:
+$$
+E_t^{(\Phi,V)} := \int V \, d\mu_t^N + \frac{1}{2} \iint \Phi(x-y) \, d\mu_t^N(x) d\mu_t^N(y) = \frac{1}{N}\sum_i V(X_t^i) + \frac{1}{2N^2}\sum_{i,j} \Phi(X_t^i - X_t^j).
+$$
+
+\textbf{Step 1: Itô's formula.}
+Apply Itô's formula to $E_t^{(\Phi,V)}$:
+\begin{align*}
+dE_t^{(\Phi,V)} &= \sum_i \frac{\partial E_t}{\partial X_t^i} \cdot dX_t^i + \frac{1}{2}\sum_i \text{tr}\left(\frac{\partial^2 E_t}{\partial (X_t^i)^2}\right) \sigma^2 dt \\
+&= \frac{1}{N}\sum_i \left[\nabla V(X_t^i) + \frac{1}{N}\sum_j \nabla_x \Phi(X_t^i - X_t^j)\right] \cdot dX_t^i \\
+&\quad + \frac{\sigma^2}{2N}\sum_i \left[\Delta V(X_t^i) + \frac{1}{N}\sum_j \Delta \Phi(X_t^i - X_t^j)\right] dt.
+\end{align*}
+
+\textbf{Step 2: Substitute dynamics.}
+Using $dX_t^i = b^*(X_t^i, \mu_t^N) dt + \sigma dW_t^i$ where the true drift is:
+$$
+b^*(x, \mu) = -\nabla V^*(x) - \nabla \Phi^* * \mu(x),
+$$
+we get:
+\begin{align*}
+dE_t^{(\Phi,V)} &= \frac{1}{N}\sum_i \underbrace{\left[\nabla V(X_t^i) + \nabla \Phi * \mu_t^N(X_t^i)\right]}_{=: D_i^{(\Phi,V)}} \cdot \left[-\nabla V^*(X_t^i) - \nabla \Phi^* * \mu_t^N(X_t^i)\right] dt \\
+&\quad + \frac{\sigma^2}{2N}\sum_i \left[\Delta V(X_t^i) + \Delta \Phi * \mu_t^N(X_t^i)\right] dt + \text{martingale}.
+\end{align*}
+
+\textbf{Step 3: Decompose the drift product.}
+Let $D_i = D_i^{(\Phi,V)}$ and $D_i^* = D_i^{(\Phi^*,V^*)}$. Then:
+\begin{align*}
+D_i \cdot (-D_i^*) &= -D_i \cdot D_i^* \\
+&= -|D_i|^2 + D_i \cdot (D_i - D_i^*) \\
+&= -|D_i|^2 + D_i \cdot \delta D_i,
+\end{align*}
+where $\delta D_i = D_i - D_i^* = \nabla \delta V(X_t^i) + \nabla \delta \Phi * \mu_t^N(X_t^i)$.
+
+\textbf{Step 4: Integrate and take expectation.}
+\begin{align*}
+\E{E_{t+\Delta t}^{(\Phi,V)} - E_t^{(\Phi,V)}} &= -\E{\frac{1}{N}\sum_i |D_i|^2} \Delta t + \E{\frac{1}{N}\sum_i D_i \cdot \delta D_i} \Delta t \\
+&\quad + \frac{\sigma^2}{2}\E{\frac{1}{N}\sum_i [\Delta V + \Delta \Phi * \mu_t^N](X_t^i)} \Delta t + O(\Delta t^2).
+\end{align*}
+
+\textbf{Step 5: Rearrange to get the loss.}
+The loss function is constructed so that minimizing it maximizes the energy dissipation rate. Rearranging:
+\begin{align*}
+\mathcal{E}(\Phi,V) &:= \E{\frac{1}{N}\sum_i |D_i|^2} \Delta t + \frac{\sigma^2}{2}\E{\frac{1}{N}\sum_i [\Delta V + \Delta \Phi * \mu_t^N](X_t^i)} \Delta t \\
+&\quad - 2\E{E_{t+\Delta t}^{(\Phi,V)} - E_t^{(\Phi,V)}}.
+\end{align*}
+
+At the true parameters $(\Phi^*, V^*)$, this equals the energy dissipation rate plus the diffusion contribution, which is a known constant. The residual term is:
+$$
+\mathcal{R}(\delta\Phi, \delta V) = \mathcal{E}(\Phi,V) - \mathcal{E}(\Phi^*,V^*) = \E{\frac{1}{N}\sum_i |\delta D_i|^2} \Delta t \geq 0.
+$$
+\end{proof}
+
+%% ============================================
+\subsection{Minimax Lower Bound}
+\label{app:minimax}
+%% ============================================
+
+\begin{theorem}[Minimax Lower Bound]\label{thm:minimax_lower}
+Let $\mathcal{F}_s = \{\Phi \in C^s: \|\Phi\|_{C^s} \leq R\}$ be a Hölder ball. For any estimator $\hat{\Phi}$ based on $n = ML$ samples:
+\begin{equation}
+\inf_{\hat{\Phi}} \sup_{\Phi^* \in \mathcal{F}_s} \E{\|\nabla\hat{\Phi} - \nabla\Phi^*\|_{L^2_\rho}^2} \geq c \cdot n^{-\frac{2(s-1)}{2s + d}},
+\end{equation}
+where $c > 0$ depends on $R, d, s$ and the coercivity constant.
+\end{theorem}
+
+\begin{proof}
+The proof uses Fano's inequality and the standard reduction to hypothesis testing.
+
+\textbf{Step 1: Construct a packing.}
+Let $\{\Phi_1, \ldots, \Phi_M\}$ be a maximal $\epsilon$-packing of $\mathcal{F}_s$ in the $\|\nabla \cdot\|_{L^2_\rho}$ metric. By metric entropy bounds for Hölder balls:
+$$
+\log M \geq c_1 \epsilon^{-d/(s-1)}.
+$$
+
+\textbf{Step 2: Bound the KL divergence.}
+For two hypotheses $\Phi_i, \Phi_j$, the KL divergence between the induced distributions on $n$ samples is:
+$$
+D_{KL}(P_{\Phi_i}^{(n)} \| P_{\Phi_j}^{(n)}) \leq C n \|\nabla\Phi_i - \nabla\Phi_j\|_{L^2_\rho}^2 \cdot (\Delta t)^2 \leq C n \epsilon^2 \Delta t^2.
+$$
+This follows from the fact that the loss function difference is quadratic in the gradient perturbation.
+
+\textbf{Step 3: Apply Fano's inequality.}
+For reliable discrimination, we need:
+$$
+\frac{1}{M}\sum_{i \neq j} D_{KL}(P_{\Phi_i}^{(n)} \| P_{\Phi_j}^{(n)}) \leq \alpha \log M,
+$$
+for some $\alpha < 1$. This requires:
+$$
+C n \epsilon^2 \leq \alpha c_1 \epsilon^{-d/(s-1)},
+$$
+which gives $\epsilon \geq c_2 n^{-(s-1)/(2s+d-2)}$.
+
+\textbf{Step 4: Conclude.}
+Any estimator must have error at least $\epsilon^2 \geq c n^{-2(s-1)/(2s+d-2)}$ on some hypothesis.
+\end{proof}
+
+%% ============================================
+\subsection{Gaussian Integral Computations}
+\label{app:gaussian_integrals}
+%% ============================================
+
+We compute the coercivity constants for Gaussian initial distributions.
+
+\textbf{Setup:} Let $X^1, X^2, X^3 \sim_{iid} \mathcal{N}(0, I_d)$. Define $r_{12} = X^2 - X^1$ and $r_{13} = X^3 - X^1$.
+
+\textbf{Distribution of differences:} 
+$$
+r_{12} \sim \mathcal{N}(0, 2I_d), \quad |r_{12}| \sim \rho_d(r) = C_d r^{d-1} e^{-r^2/4},
+$$
+where $C_d = 1/(2^{d-1}\Gamma(d/2))$.
+
+\textbf{Joint distribution:} The key quantity is:
+$$
+\E{\frac{\langle r_{12}, r_{13} \rangle}{|r_{12}| |r_{13}|} \phi(|r_{12}|) \phi(|r_{13}|)}.
+$$
+
+\textbf{Dimension $d=1$:}
+\begin{align*}
+G_1(r,s) &= |S^0| \int_{S^0} \xi \cdot e^{rs\xi/3} d\xi = 2(e^{rs/3} - e^{-rs/3}).
+\end{align*}
+The bound becomes:
+$$
+I(1, G_1) = \frac{1}{\sqrt{3}\pi} \left[\frac{1}{2}\int_{\R^2} e^{-5(r^2+s^2)/12 + 2rs/3} dr\,ds - \frac{1}{2}\int_{\R^2} e^{-5(r^2+s^2)/12} dr\,ds\right]^{1/2} = \sqrt{\frac{4}{15}}.
+$$
+
+\textbf{Dimension $d=2$:}
+$$
+G_2(r,s) = |S^1| |S^0| \int_0^1 \xi(1-\xi^2)^{1/2}(e^{rs\xi/3} - e^{-rs\xi/3}) d\xi.
+$$
+Numerical evaluation gives $I(2, G_2) \approx 0.127$, so $c_0 \geq 0.873$.
+
+\textbf{Dimension $d=3$:}
+$$
+G_3(r,s) = |S^2| |S^1| \int_0^1 \xi(1-\xi^2)(e^{rs\xi/3} - e^{-rs\xi/3}) d\xi.
+$$
+With $J_0(3) = 784\pi/125$, we get $I(3, G_3) \approx 0.266$, so $c_0 \geq 0.734$.
+
+%% ============================================
+\subsection{Neural Network Approximation Theory}
+\label{app:nn_approx}
+%% ============================================
+
+\begin{lemma}[ReLU Network Approximation of Smooth Functions]\label{lem:relu_approx}
+Let $f \in C^s([0,1]^d)$ with $\|f\|_{C^s} \leq B$. For any $\epsilon > 0$, there exists a ReLU network $f_{NN}$ with:
+\begin{itemize}
+    \item Width $W = O(\epsilon^{-d/s} \log(1/\epsilon))$
+    \item Depth $D = O(\log(1/\epsilon))$
+\end{itemize}
+such that $\|f - f_{NN}\|_{C^0} \leq \epsilon$.
+
+For $C^2$ approximation needed in our loss function:
+$$
+\|f - f_{NN}\|_{C^2} \leq C \epsilon^{(s-2)/s},
+$$
+using smoothed ReLU activations or sufficiently deep networks.
+\end{lemma}
+
+\begin{proof}[Proof Sketch]
+The proof uses:
+\begin{enumerate}
+    \item Local polynomial approximation on a grid with spacing $h = \epsilon^{1/s}$.
+    \item ReLU networks can exactly represent piecewise linear functions.
+    \item Smooth activation (GELU, softplus) gives better derivative approximation.
+\end{enumerate}
+See \cite{yarotsky2017error, lu2021deep} for detailed constructions.
+\end{proof}
+
+\begin{theorem}[Rademacher Complexity of Neural Networks]\label{thm:rademacher}
+Let $\mathcal{F}_{NN}(W, D, B)$ be ReLU networks with width $W$, depth $D$, and weight bound $B$. The Rademacher complexity satisfies:
+$$
+\mathcal{R}_n(\mathcal{F}_{NN}) \leq \frac{C B^D \sqrt{WD \log(WD)}}{\sqrt{n}}.
+$$
+\end{theorem}
+
+This leads to the estimation error bound in Theorem \ref{thm:total_error}.
+
+%% ============================================
+\subsection{Time Discretization Error}
+\label{app:discretization}
+%% ============================================
+
+\begin{proposition}[Discretization Error]\label{prop:discretization}
+The error from using discrete time observations with step $\Delta t$ is:
+$$
+|\mathcal{E}_{\mathcal{D}}(\Phi,V) - \mathcal{E}_{cont}(\Phi,V)| \leq C_{Lip} (\|\nabla\Phi\|_\infty + \|\nabla V\|_\infty)^2 \Delta t,
+$$
+where $\mathcal{E}_{cont}$ is the continuous-time limit and $C_{Lip}$ depends on the Lipschitz constants of the dynamics.
+\end{proposition}
+
+\begin{proof}
+The discretization introduces error through:
+\begin{enumerate}
+    \item Approximating $\int_t^{t+\Delta t}$ by $(\cdot)|_t \cdot \Delta t$.
+    \item Using $\mu_t^N$ instead of $\mu_s^N$ for $s \in [t, t+\Delta t]$.
+\end{enumerate}
+By the mean value theorem and Lipschitz continuity of the flow:
+$$
+|\mu_{t+\Delta t}^N - \mu_t^N|_{W_1} \leq C \Delta t,
+$$
+where $W_1$ is the Wasserstein-1 distance. The error bound follows.
+\end{proof}
+

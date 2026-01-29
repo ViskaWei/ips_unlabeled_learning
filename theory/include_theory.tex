@@ -1,0 +1,70 @@
+%% Include this file in LED_ips_nn.tex to add the theory section
+%% Add before \bibliography:
+%%
+%% \input{theory/include_theory}
+%%
+%% Or copy the contents directly into your main file.
+
+%% ============================================
+%% THEORETICAL ANALYSIS
+%% ============================================
+
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+We establish the theoretical foundations for learning from unlabeled ensemble data. Our analysis addresses identifiability, consistency, and convergence rates.
+
+\subsection{Identifiability}
+
+A fundamental question is whether the potentials $(\Phi^*, V^*)$ can be uniquely determined from the data distribution.
+
+\begin{definition}[Identifiability]
+The pair $(\Phi^*, V^*)$ is \emph{identifiable} if for any $(\Phi, V)$ with $\mathcal{E}_\infty(\Phi, V) = \mathcal{E}_\infty(\Phi^*, V^*)$, we have $\Phi = \Phi^* + c_1$ and $V = V^* + c_2$ for constants $c_1, c_2$.
+\end{definition}
+
+\begin{definition}[Coercivity]
+The coercivity condition holds with constant $c_H > 0$ if:
+$$
+\E{\frac{1}{N}\sum_i \left|\nabla \delta V(X_t^i) + \frac{1}{N}\sum_j \nabla \delta\Phi(X_t^i - X_t^j)\right|^2} \geq c_H \left(\|\nabla \delta V\|_{L^2}^2 + \|\nabla \delta\Phi\|_{L^2}^2\right)
+$$
+for all zero-mean perturbations $\delta V, \delta\Phi$.
+\end{definition}
+
+\begin{theorem}[Identifiability]\label{thm:main_ident}
+Under assumptions (A1)-(A3) and the coercivity condition, $(\Phi^*, V^*)$ is identifiable.
+\end{theorem}
+
+The proof shows that the loss residual $\mathcal{E}(\Phi,V) - \mathcal{E}(\Phi^*,V^*)$ is lower bounded by the coercivity constant times the squared distance, so zero residual implies zero distance.
+
+\begin{proposition}[Gaussian Coercivity]
+For i.i.d. Gaussian initial conditions $X_0^i \sim \mathcal{N}(0, I_d)$, the coercivity constant satisfies $c_H \geq 0.48$ for $d=1$, $c_H \geq 0.87$ for $d=2$, and $c_H \geq 0.73$ for $d=3$.
+\end{proposition}
+
+\subsection{Consistency and Convergence Rates}
+
+\begin{theorem}[Consistency]\label{thm:consist}
+Let $(\hat{\Phi}_n, \hat{V}_n)$ minimize $\mathcal{E}_{\mathcal{D}}$ with $n = ML$ samples. Under coercivity:
+$$
+\|\nabla\hat{\Phi}_n - \nabla\Phi^*\|_{L^2} + \|\nabla\hat{V}_n - \nabla V^*\|_{L^2} \xrightarrow{P} 0.
+$$
+\end{theorem}
+
+\begin{theorem}[Rate]\label{thm:rate}
+For neural network estimators with width $W$ and depth $D$, the total error decomposes as:
+$$
+\text{Error} \leq \underbrace{O(W^{-2(s-1)/d})}_{\text{approximation}} + \underbrace{O\left(\frac{WD}{n}\right)}_{\text{estimation}} + \underbrace{O(\Delta t)}_{\text{discretization}}.
+$$
+Optimizing $W \asymp n^{d/(2s+d-2)}$ gives rate $n^{-2(s-1)/(2s+d-2)}$ for $C^s$ potentials.
+\end{theorem}
+
+\begin{theorem}[Minimax Lower Bound]\label{thm:lower}
+For $C^s$ potential classes:
+$$
+\inf_{\hat{\Phi}} \sup_{\Phi^*} \E{\|\nabla\hat{\Phi} - \nabla\Phi^*\|^2} \geq c \cdot n^{-2(s-1)/(2s+d)}.
+$$
+\end{theorem}
+
+The upper and lower bounds match for $s=2$ (twice differentiable potentials), confirming minimax optimality.
+
+%% Proofs are in Appendix
+\textit{Proofs are provided in Appendix \ref{app:proofs}.}

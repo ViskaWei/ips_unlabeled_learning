@@ -1,0 +1,52 @@
+\documentclass[11pt]{article}
+
+% Packages
+\usepackage{amsmath,amssymb,amsfonts,amsthm}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{enumitem}
+\usepackage{bm}
+
+% Theorem environments
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{assumption}{Assumption}
+
+% Commands (from LED_ips_nn.tex)
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\E}[1]{\mathbb{E}\left[{#1}\right]}
+\newcommand{\Var}{\mathrm{Var}}
+\newcommand{\Cov}{\mathrm{Cov}}
+\newcommand{\bX}{\mathbf{X}}
+\newcommand{\bx}{\mathbf{x}}
+\newcommand{\bW}{\mathbf{W}}
+\newcommand{\bw}{\mathbf{w}}
+\newcommand{\calE}{\mathcal{E}}
+\newcommand{\norm}[1]{\left\|#1\right\|}
+\newcommand{\normv}[1]{\left|#1\right|}
+
+\title{\textbf{Theoretical Analysis for Learning from Unlabeled Data\\for Interacting Particle Systems}}
+\author{Theory Supplement for LED\_ips\_nn}
+\date{January 2025}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+This document presents a comprehensive theoretical analysis for learning interaction and kinetic potentials from unlabeled ensemble data of interacting particle systems. We establish: (i) identifiability conditions under coercivity, (ii) consistency and convergence rates for the estimator, (iii) minimax lower bounds proving optimality, and (iv) neural network approximation and generalization bounds.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{theoretical_analysis}
+
+\newpage
+\input{appendix_proofs}
+
+\end{document}

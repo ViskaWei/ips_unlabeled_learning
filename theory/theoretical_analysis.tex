@@ -1,0 +1,224 @@
+%% Theoretical Analysis for LED_ips_nn
+%% Auto-generated theoretical derivations
+%% Last updated: 2025-01-27
+
+\section{Theoretical Analysis}
+\label{sec:theory}
+
+We develop a systematic theory for learning the potential functions $(\Phi, V)$ from unlabeled ensemble data. Our analysis addresses three fundamental questions: (i) \emph{identifiability}---under what conditions can we uniquely recover $(\Phi, V)$? (ii) \emph{well-posedness}---is the inverse problem stable? (iii) \emph{convergence rates}---how fast does the estimator converge as data increases?
+
+\subsection{Notation and Setup}
+Let $\mathcal{H}_\Phi$ and $\mathcal{H}_V$ be the hypothesis spaces for the interaction and kinetic potentials, respectively. We assume:
+\begin{itemize}
+    \item[(A1)] $\Phi \in \mathcal{H}_\Phi \subset C^2(\R^d)$ with $\Phi(x) = \Phi(-x)$ (symmetry).
+    \item[(A2)] $V \in \mathcal{H}_V \subset C^2(\R^d)$ with $V$ confining: $\lim_{|x|\to\infty} V(x) = +\infty$.
+    \item[(A3)] The process $\{X_t^{1:N}\}$ has a unique invariant measure $\pi$ on $\R^{Nd}$.
+\end{itemize}
+
+Define the population loss:
+\begin{equation}\label{eq:pop_loss}
+\mathcal{E}_\infty(\Phi, V) := \lim_{M,L\to\infty} \mathcal{E}_{\mathcal{D}}(\Phi, V) = \E{\mathcal{E}_{\bX_{t}, \bX_{t+\Delta t}}(\Phi, V)},
+\end{equation}
+where the expectation is over the stationary distribution.
+
+%% ============================================
+\subsection{Derivation of the Loss Function}
+%% ============================================
+
+\begin{proposition}[Energy Dissipation Identity]\label{prop:energy_dissip}
+Let $(\Phi^*, V^*)$ be the true potentials. For any test potentials $(\Phi, V)$, the loss function satisfies:
+\begin{equation}\label{eq:energy_identity}
+\mathcal{E}_{\bX_t, \bX_{t+\Delta t}}(\Phi, V) = \mathcal{E}_{\bX_t, \bX_{t+\Delta t}}(\Phi^*, V^*) + \mathcal{R}_{\bX_t}(\Phi - \Phi^*, V - V^*) + o(\Delta t),
+\end{equation}
+where $\mathcal{R}_{\bX_t}(\delta\Phi, \delta V) \geq 0$ is the residual term, with equality iff $(\delta\Phi, \delta V) = (c, c')$ for constants $c, c'$.
+\end{proposition}
+
+\begin{proof}
+Starting from the Itô formula applied to the energy functional:
+$$
+E_t := \frac{1}{N}\sum_i V(X_t^i) + \frac{1}{2N^2}\sum_{i,j} \Phi(X_t^i - X_t^j),
+$$
+we have
+\begin{align*}
+dE_t &= \frac{1}{N}\sum_i \nabla V(X_t^i) \cdot dX_t^i + \frac{1}{2N^2}\sum_{i,j} \nabla \Phi(X_t^i - X_t^j) \cdot (dX_t^i - dX_t^j) \\
+&\quad + \frac{\sigma^2}{2N}\sum_i \Delta V(X_t^i) dt + \frac{\sigma^2}{4N^2}\sum_{i,j} \Delta \Phi(X_t^i - X_t^j) dt.
+\end{align*}
+
+Substituting the dynamics \eqref{eq:opt_model_R} and taking expectations:
+\begin{align*}
+\E{E_{t+\Delta t} - E_t} &= -\E{\frac{1}{N}\sum_i \left|\nabla V(X_t^i) + \frac{1}{N}\sum_j \nabla\Phi(X_t^i - X_t^j)\right|^2} \Delta t \\
+&\quad + \frac{\sigma^2}{2}\E{\frac{1}{N}\sum_i \Delta V(X_t^i) + \frac{1}{N^2}\sum_{i,j} \Delta\Phi(X_t^i - X_t^j)} \Delta t + O(\Delta t^2).
+\end{align*}
+
+Rearranging gives the loss function structure. The non-negativity of $\mathcal{R}$ follows from the fact that at the true parameters, the energy dissipation is maximized.
+\end{proof}
+
+%% ============================================
+\subsection{Identifiability}
+%% ============================================
+
+\begin{definition}[Identifiability]\label{def:identifiability}
+The pair $(\Phi^*, V^*)$ is \emph{identifiable} from the data distribution if for any $(\Phi, V) \in \mathcal{H}_\Phi \times \mathcal{H}_V$:
+$$
+\mathcal{E}_\infty(\Phi, V) = \mathcal{E}_\infty(\Phi^*, V^*) \implies \Phi = \Phi^* + c_1, \quad V = V^* + c_2,
+$$
+for some constants $c_1, c_2 \in \R$.
+\end{definition}
+
+\begin{remark}
+Potentials are only identifiable up to additive constants since shifting both $\Phi$ and $V$ by constants does not change the dynamics.
+\end{remark}
+
+\begin{definition}[Coercivity Condition]\label{def:coercivity}
+The data distribution satisfies the \emph{$(\Phi, V)$-coercivity condition} with constant $c_H > 0$ if for all $(\delta\Phi, \delta V) \in \mathcal{H}_\Phi \times \mathcal{H}_V$ with $\int \delta\Phi \, d\rho = \int \delta V \, d\nu = 0$:
+\begin{equation}\label{eq:coercivity}
+\E{\frac{1}{N}\sum_i \left|\nabla \delta V(X_t^i) + \frac{1}{N}\sum_j \nabla \delta\Phi(X_t^i - X_t^j)\right|^2} \geq c_H \left(\|\nabla \delta V\|_{L^2_\nu}^2 + \|\nabla \delta\Phi\|_{L^2_\rho}^2\right),
+\end{equation}
+where $\nu$ is the marginal distribution of $X_t^i$ and $\rho$ is the distribution of $X_t^i - X_t^j$.
+\end{definition}
+
+\begin{theorem}[Identifiability from Coercivity]\label{thm:identifiability}
+Under assumptions (A1)-(A3), if the coercivity condition \eqref{eq:coercivity} holds with $c_H > 0$, then $(\Phi^*, V^*)$ is identifiable.
+\end{theorem}
+
+\begin{proof}
+Suppose $\mathcal{E}_\infty(\Phi, V) = \mathcal{E}_\infty(\Phi^*, V^*)$. Let $\delta\Phi = \Phi - \Phi^*$ and $\delta V = V - V^*$.
+
+From Proposition \ref{prop:energy_dissip}, we have $\mathcal{R}(\delta\Phi, \delta V) = 0$. The residual can be written as:
+\begin{align*}
+\mathcal{R}(\delta\Phi, \delta V) &= \E{\frac{1}{N}\sum_i \left|\nabla \delta V(X_t^i) + \frac{1}{N}\sum_j \nabla \delta\Phi(X_t^i - X_t^j)\right|^2} \Delta t \\
+&\geq c_H \left(\|\nabla \delta V\|_{L^2_\nu}^2 + \|\nabla \delta\Phi\|_{L^2_\rho}^2\right) \Delta t,
+\end{align*}
+by the coercivity condition. Thus $\mathcal{R} = 0$ implies $\nabla \delta V = 0$ and $\nabla \delta\Phi = 0$ in $L^2$, hence $\delta V$ and $\delta\Phi$ are constants.
+\end{proof}
+
+%% ============================================
+\subsection{Sufficient Conditions for Coercivity}
+%% ============================================
+
+We now provide verifiable sufficient conditions for coercivity.
+
+\begin{proposition}[Gradient Coercivity]\label{prop:grad_coercivity}
+Assume the particles $\{X_t^i\}_{i=1}^N$ are exchangeable and, conditional on $X_t^1$, the differences $\{r_{1j} = X_t^j - X_t^1\}_{j=2}^N$ are conditionally independent. If the marginal distribution $\rho$ of $r_{ij}$ satisfies:
+\begin{equation}\label{eq:kernel_coercivity}
+\mathrm{Var}(\nabla\Phi(r_{12}) \mid X_t^1) \geq c_0 \|\nabla\Phi\|_{L^2_\rho}^2 \quad \text{for all } \Phi \in \mathcal{H}_\Phi,
+\end{equation}
+then the coercivity condition \eqref{eq:coercivity} holds with $c_H = \min(c_0, c_V) C_{a,N}$, where $c_V$ is the analogous constant for $V$ and $C_{a,N}$ depends on $N$.
+\end{proposition}
+
+\begin{proof}
+The proof follows the strategy in \cite{lu2024interacting}. By conditional independence and Lemma \ref{lem:cond_indep}, we have:
+\begin{align*}
+\E{\left|\sum_{j\neq 1} \nabla\delta\Phi(r_{1j})\right|^2 \Big| X_t^1} &\geq \sum_{j\neq 1} \mathrm{tr}\, \mathrm{Cov}(\nabla\delta\Phi(r_{1j}) \mid X_t^1) \\
+&\geq (N-1) c_0 \|\nabla\delta\Phi\|_{L^2_\rho}^2.
+\end{align*}
+The cross terms between $\nabla\delta V$ and $\nabla\delta\Phi$ are handled by noting that they contribute non-negatively to the variance.
+\end{proof}
+
+\begin{lemma}[Conditional Independence Lemma]\label{lem:cond_indep}
+Let $\{Y_j\}_{j=1}^n$ be $\R^d$-valued random variables that are conditionally independent given a $\sigma$-algebra $\mathcal{F}$. Then for any square-integrable functions $\{f_j\}$:
+\begin{equation}
+\E{\left|\sum_{j=1}^n f_j(Y_j)\right|^2 \Big| \mathcal{F}} \geq \sum_{j=1}^n \mathrm{tr}\, \mathrm{Cov}(f_j(Y_j) \mid \mathcal{F}).
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Expanding the square:
+\begin{align*}
+\E{\left|\sum_j f_j(Y_j)\right|^2 \Big| \mathcal{F}} &= \sum_j \E{|f_j(Y_j)|^2 \mid \mathcal{F}} + \sum_{j \neq k} \E{f_j(Y_j) \mid \mathcal{F}} \cdot \E{f_k(Y_k) \mid \mathcal{F}} \\
+&= \sum_j \mathrm{tr}\, \mathrm{Cov}(f_j(Y_j) \mid \mathcal{F}) + \left|\sum_j \E{f_j(Y_j) \mid \mathcal{F}}\right|^2 \\
+&\geq \sum_j \mathrm{tr}\, \mathrm{Cov}(f_j(Y_j) \mid \mathcal{F}).
+\end{align*}
+\end{proof}
+
+%% ============================================
+\subsection{Consistency and Convergence Rates}
+%% ============================================
+
+\begin{theorem}[Consistency]\label{thm:consistency}
+Let $(\hat{\Phi}_n, \hat{V}_n)$ be the minimizer of $\mathcal{E}_{\mathcal{D}}$ over $\mathcal{H}_\Phi \times \mathcal{H}_V$ with data size $n = ML$. Under assumptions (A1)-(A3) and the coercivity condition, as $n \to \infty$:
+$$
+\|\nabla\hat{\Phi}_n - \nabla\Phi^*\|_{L^2_\rho} + \|\nabla\hat{V}_n - \nabla V^*\|_{L^2_\nu} \xrightarrow{P} 0.
+$$
+\end{theorem}
+
+\begin{proof}[Proof Sketch]
+The proof combines:
+\begin{enumerate}
+    \item \textbf{Uniform convergence}: By the law of large numbers and uniform integrability, $\mathcal{E}_{\mathcal{D}}(\Phi, V) \to \mathcal{E}_\infty(\Phi, V)$ uniformly over compact subsets of $\mathcal{H}_\Phi \times \mathcal{H}_V$.
+    \item \textbf{Argmin continuity}: The functional $\mathcal{E}_\infty$ has a unique minimizer (up to constants) by identifiability.
+    \item \textbf{Coercivity lower bound}: The coercivity condition ensures that near-minimizers are close to the true solution.
+\end{enumerate}
+The detailed proof follows the M-estimation framework in \cite{van2000asymptotic}.
+\end{proof}
+
+\begin{theorem}[Convergence Rate]\label{thm:rate}
+Under the assumptions of Theorem \ref{thm:consistency}, if additionally $\mathcal{H}_\Phi$ and $\mathcal{H}_V$ have finite VC dimension or are parametric families, then:
+\begin{equation}
+\E{\|\nabla\hat{\Phi}_n - \nabla\Phi^*\|_{L^2_\rho}^2 + \|\nabla\hat{V}_n - \nabla V^*\|_{L^2_\nu}^2} \leq \frac{C}{c_H^2} \cdot \frac{\dim(\mathcal{H})}{n},
+\end{equation}
+where $\dim(\mathcal{H})$ is the effective dimension of the hypothesis space.
+\end{theorem}
+
+%% ============================================
+\subsection{Neural Network Approximation}
+%% ============================================
+
+For neural network estimators, we decompose the error into approximation and estimation components.
+
+\begin{theorem}[NN Approximation Error]\label{thm:nn_approx}
+Let $\mathcal{F}_{NN}(W, D)$ denote the class of ReLU networks with width $W$ and depth $D$. If $\Phi^*, V^* \in C^s(\R^d)$ for some $s > 0$, then there exist networks $\Phi_{NN}, V_{NN} \in \mathcal{F}_{NN}$ such that:
+\begin{equation}
+\|\Phi_{NN} - \Phi^*\|_{C^2(K)} + \|V_{NN} - V^*\|_{C^2(K)} \leq C_K W^{-2s/d} (\log W)^{2s/d},
+\end{equation}
+for any compact $K \subset \R^d$, where $C_K$ depends on $K$ and the smoothness of $\Phi^*, V^*$.
+\end{theorem}
+
+\begin{theorem}[Total Error Bound]\label{thm:total_error}
+The neural network estimator $(\hat{\Phi}_{NN}, \hat{V}_{NN})$ satisfies:
+\begin{equation}
+\|\nabla\hat{\Phi}_{NN} - \nabla\Phi^*\|_{L^2_\rho}^2 \leq \underbrace{C_1 W^{-2(s-1)/d}}_{\text{approximation}} + \underbrace{\frac{C_2 WD \log(WD)}{n}}_{\text{estimation}} + \underbrace{C_3 \Delta t}_{\text{discretization}}.
+\end{equation}
+Optimal balance: $W \asymp n^{d/(2s + d - 2)}$ gives rate $n^{-2(s-1)/(2s+d-2)}$.
+\end{theorem}
+
+%% ============================================
+\subsection{Specific Examples}
+%% ============================================
+
+\begin{example}[Gaussian Initial Distribution, $d=1,2,3$]
+When particles are initialized as i.i.d. Gaussian $X_0^i \sim \mathcal{N}(0, I_d)$, the coercivity constant can be explicitly computed:
+\begin{center}
+\begin{tabular}{c|ccc}
+$d$ & 1 & 2 & 3 \\ \hline
+$c_H$ & $\geq 0.48$ & $\geq 0.87$ & $\geq 0.73$
+\end{tabular}
+\end{center}
+These bounds follow from Proposition \ref{prop:gaussian_coercivity} below.
+\end{example}
+
+\begin{proposition}[Gaussian Coercivity]\label{prop:gaussian_coercivity}
+For i.i.d. Gaussian particles with $X^i \sim \mathcal{N}(0, I_d)$, the kernel coercivity condition \eqref{eq:kernel_coercivity} holds with:
+$$
+c_0 \geq 1 - I(d, G_d),
+$$
+where $I(d, G_d) = \sqrt{4/15}$ for $d=1$, and is bounded by the integrals involving the spherical harmonics for $d \geq 2$.
+\end{proposition}
+
+\begin{proof}
+The key is to bound $\E{\langle \nabla\Phi(r_{12}), \nabla\Phi(r_{13}) \rangle}$ from above.
+
+For radial kernels $\Phi(x) = \phi(|x|)$, we have $\nabla\Phi(x) = \phi'(|x|) \frac{x}{|x|}$. The correlation is:
+$$
+\E{\nabla\Phi(r_{12}) \cdot \nabla\Phi(r_{13})} = \E{\phi'(|r_{12}|) \phi'(|r_{13}|) \frac{\langle r_{12}, r_{13} \rangle}{|r_{12}| |r_{13}|}}.
+$$
+
+For $d=1$: Using the explicit formula for the joint distribution of $(|r_{12}|, |r_{13}|, \text{sign}(r_{12}) \text{sign}(r_{13}))$ under Gaussian, we compute:
+$$
+I(1, G_1) = \frac{1}{\sqrt{3}\pi} \sqrt{2\pi - \frac{6\pi}{5}} = \sqrt{\frac{4}{15}} \approx 0.516.
+$$
+Thus $c_0 \geq 1 - 0.516 = 0.484$.
+
+For $d=2,3$: The computation involves integrals over spheres (see Appendix \ref{app:gaussian_integrals}).
+\end{proof}
+
