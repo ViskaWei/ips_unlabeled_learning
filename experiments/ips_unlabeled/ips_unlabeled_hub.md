@@ -15,6 +15,8 @@
 | K9 | ✅ **确认**：Error functional 公式正确 | Oracle test: c_opt=0.97≈1.0 (稳定 solver) | 公式无误 |
 | K10 | ⚠️ **关键发现**：**B-spline 在卷积空间共线** | 真实 φ 在基中仍不唯一恢复 | **需要 RKHS 正则化** |
 | K11 | ⚠️ **Identifiability**：不同系数可产生等效 φ | c=[0,1,0] vs c=[-2.2,3.7,-0.9] 误差相近 | 解不唯一 |
+| K12 | ❌ **确认：Fundamental Identifiability** | [φ_true, r] 的解不是 [1,0] 而是 [0.63,-0.04] | **PDE 残差最小 ≠ φ 正确** |
+| K13 | ✅ **确认：Error functional 公式正确** | Oracle test 通过 (c=0.96≈1.0) | 问题不在公式 |
 
 **🦾 现阶段信念 [≤10条，写"所以呢"]**
 - **信念1**：标准方法（MLE/MSE）需要轨迹信息，无法直接应用 → 必须开发 trajectory-free 方法
@@ -28,20 +30,21 @@
 - **信念9** ✅ (理论确认)：**必须固定 V 或 Φ 之一** → Fei Lu: "not possible in general to identify both potentials"
 - **信念10** ✅ (理论确认)：**必须使用 RKHS 正则化** → Fei Lu: "inverse problem is ill-posed, regularization required"
 
-**👣 下一步最有价值** (2026-01-29 更新 - MVP-2.0 Identifiability 分析完成)
-- 🔴 **P0**：**实现 RKHS 正则化**（阻塞性问题，必须解决）
-  - ✅ Error functional 公式已验证正确
+**👣 下一步最有价值** (2026-01-29 更新 - MVP-2.0 Fundamental Identifiability 确认)
+- 🔴 **P0**：**决策点：是否继续 Fei Lu 方向？**
+  - ✅ Error functional 公式正确 (Oracle c=0.96)
   - ✅ PDE solver 已修复 (semi-implicit)
-  - ❌ B-spline 基函数在卷积空间共线 → **需要 data-adaptive basis**
-  - 参考: Fei Lu 论文 Section 3 — RKHS eigenfunctions
-- 🔴 **P0**：**尝试正交基函数** (快速尝试)
-  - Legendre 多项式、Chebyshev 多项式
-  - 目标：避免基函数共线性
-- 🟡 **P1**：**阅读 RKHS 实现细节**
-  - [ ] [arXiv:2205.11006](https://arxiv.org/abs/2205.11006) — Data adaptive RKHS Tikhonov
-  - [ ] 理解 "eigenfunctions of integral operator" 的具体计算
-- 🟡 **P1**：**验证从粒子数据估计 u(x,t)** — 当前用干净 PDE 数据，需测试 KDE
-- 🟢 **P2**：**多系统联合学习** — 不同 V 的系统共享 Φ
+  - ❌ **Fundamental identifiability**: 不同 φ 可产生相同 PDE 残差
+  - ❌ 正交基、minimal basis 都无法解决
+  - **选项 A**: 深入理解 RKHS 正则化如何解决 identifiability
+  - **选项 B**: 换方向（如 trajectory-based 方法作为 baseline）
+- 🟡 **P1**：如果选 A，需要理解 RKHS
+  - [ ] Fei Lu 论文 Section 3 — 如何构造 data-adaptive basis
+  - [ ] 理解 "identifiability through regularization" 的数学原理
+- 🟡 **P1**：如果选 B，需要实现 baseline
+  - [ ] Trajectory-based MLE（需要轨迹标签）
+  - [ ] 验证方法论在有标签情况下是否正确
+- 🟢 **P2**：**多系统联合学习** — 增加约束来解决 identifiability
 
 > **权威数字**：Best=-；Baseline=-；Δ=-；条件=待定义
 
