@@ -179,13 +179,79 @@ Legend: ✅ 已验证 | ❌ 已否定 | 🔆 进行中 | ⏳ 待验证 | 🗑️
 
 ---
 
-## 8) 变更日志
+## 8) 🔬 Fei Lu 论文综述（文献调研）
+
+> **来源**: [Fei Lu @ JHU](https://math.jhu.edu/~feilu/research.html) | **调研日期**: 2026-01-28
+
+### 8.1 关键论文列表
+
+| # | 论文 | 年份 | 核心贡献 | 与本项目关系 |
+|---|------|------|---------|-------------|
+| **P1** | [Learning interaction kernels in mean-field equations](https://arxiv.org/abs/2010.15694) (Lang & Lu, SIAM J. Sci. Comput.) | 2022 | Mean-field PDE + 分布数据 | **最相关**：与我们的 trajectory-free 设定一致 |
+| **P2** | [Identifiability of interaction kernels](https://arxiv.org/abs/2106.05565) (Lang & Lu, FODS) | 2023 | **Identifiability 理论** | 核心理论：解释为什么 loss=0 不保证唯一解 |
+| **P3** | [Learning in stochastic systems from multiple trajectories](https://arxiv.org/abs/2007.15174) (Lu, Maggioni & Tang, Found. Comput. Math.) | 2021 | SDE + 轨迹数据 | 参考：convergence rate 分析框架 |
+| **P4** | [Heterogeneous systems](https://arxiv.org/abs/1910.04832) (Lu et al., JMLR) | 2021 | 异质系统 | 参考：多系统联合学习 |
+
+### 8.2 Identifiability 核心结论（来自 P2）
+
+**问题**：Quadratic loss 何时有唯一最小值？
+
+**关键结论**：
+1. Identifiable function space = **RKHS closure** of the integral operator of inversion
+2. Finite particles vs Infinite particles 有**关键区别**
+3. Inverse problem is **ill-posed** → **必须正则化**
+4. **Weighted L² space** 比 unweighted L² space 产生更准确的估计
+
+### 8.3 Convergence Rate（来自 P1, P3）
+
+**Mean-field case (P1)**：
+- 收敛速率 = **数值积分器的阶** (numerical integrator's order)
+- 经验误差 E_{M,∞} 收敛速率: `2αs/(s+1)`
+- Δt → 0 时最优收敛
+
+**SDE case (P3)**：
+- 收敛速率 = **1D 非参数回归的 min-max rate**
+- **独立于状态空间维度**（关键优势！）
+- 离散化误差 = O(Δt^{1/2})
+
+**理论分析方向**：convergence rate as M → ∞ (样本量增加)
+
+### 8.4 成功案例（来自 P1）
+
+| 例子 | Kernel 类型 | 结果 |
+|------|------------|------|
+| Opinion dynamics | Piecewise linear | ✅ 成功：highly accurate solutions |
+| Granular media | Quadratic (smooth) | ✅ 成功：optimal rate of convergence |
+| Aggregation-diffusion | Repulsive-attractive | ✅ 成功：accurate free energy |
+
+**关键**：估计器能 reproduce highly accurate solutions and free energy。
+
+### 8.5 对本项目的启示
+
+| 优先级 | 启示 | 具体行动 |
+|--------|------|---------|
+| 🔴 **P0** | 必须实现 **RKHS 正则化** | 这是 identifiability 的关键，论文核心方法 |
+| 🔴 **P0** | 使用 **weighted L² space** | 比 unweighted 更准确 |
+| 🟡 **P1** | 理论分析方向 | convergence rate as M → ∞ |
+| 🟡 **P1** | 获取 PDF 详细参数 | 需要具体的 N, M, σ 配置 |
+
+### 8.6 待获取信息
+
+⚠️ **需要阅读论文 PDF**：
+- [ ] P1 中实验的具体参数配置 (N, M, L, σ)
+- [ ] P2 中 identifiability condition 的详细数学表述
+- [ ] P3 中 coercivity condition 的具体形式
+
+---
+
+## 9) 变更日志
 | 日期 | 变更 | 影响 |
 |---|---|---|
 | 2026-01-28 | 创建 Hub | 立项 |
 | 2026-01-28 | MVP-0.0 完成: SDE 数据生成器验证通过 | 确认数据生成可靠性，可进入 MVP-1.0 |
 | 2026-01-28 | 根据 session-1 完善问题树和洞见 | 补充数学推导、物理直觉、计算机验证三个层面的问题 |
 | 2026-01-28 | **Expert Review** 添加 | PI 评审 Phase 1 工作，调整下一步优先级：实验设定调整 > 简化问题 |
+| 2026-01-28 | **Fei Lu 论文综述** 添加 | 文献调研：identifiability 理论、convergence rate、RKHS 正则化 |
 
 <details>
 <summary><b>附录：术语表</b></summary>
