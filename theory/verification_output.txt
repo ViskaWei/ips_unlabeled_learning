@@ -1,0 +1,201 @@
+======================================================================
+FEI LU THEORY VERIFICATION
+======================================================================
+
+======================================================================
+SECTION 1: SYSTEM SETUP
+======================================================================
+
+The system (Equation 1.1 in the paper):
+
+  dx_{i,t} = (1/N) Σ_j φ(||x_j - x_i||)(x_j - x_i) dt + σ dB_{i,t}
+
+Key definitions:
+- φ: R+ → R is the interaction kernel
+- Φ'(r) = φ(r)r is the derivative of the pairwise potential
+- ρ_T: measure of pairwise distances on [0,T]
+
+The function space norm (Equation 1.6):
+  |||φ||| = ||φ(·)·||_{L²(ρ_T)} = (∫ |φ(r)r|² ρ_T(dr))^{1/2}
+  
+Note: We learn Φ'(r) = φ(r)r, not φ(r) directly!
+
+
+======================================================================
+SECTION 2: COERCIVITY CONDITION
+======================================================================
+
+From Section 3.1 of Fei Lu's paper, the coercivity condition is:
+
+DEFINITION (Coercivity): The hypothesis space H satisfies the coercivity 
+condition with constant c_H > 0 if for all φ ∈ H:
+
+  E[ ||f_φ(X)||² ] ≥ c_H · |||φ|||²
+
+where f_φ is the drift field induced by φ.
+
+EQUIVALENT FORM: Let G_T be the integral operator
+  (G_T φ)(r) = E[ Σ_{j≠1} φ(r_{1j}) · (r_{1j}/|r_{1j}|) | r_{12} = r ]
+
+Then coercivity is equivalent to:
+  ||G_T φ||_{L²(ρ_T)} ≥ c_H · ||φ||_{L²(ρ_T)}
+
+This is about the positive definiteness of an integral kernel!
+
+
+======================================================================
+SECTION 3: NUMERICAL VERIFICATION
+======================================================================
+
+--- Coercivity with varying N (at t=0, iid Gaussian) ---
+d=1, N=2:
+  E[||f_φ||²] = 1.000000
+  |||φ|||² = 1.000000
+  c_H = E[||f_φ||²] / |||φ|||² = 1.000000
+
+d=1, N=3:
+  E[||f_φ||²] = 0.666570
+  |||φ|||² = 1.000000
+  c_H = E[||f_φ||²] / |||φ|||² = 0.666570
+
+d=1, N=5:
+  E[||f_φ||²] = 0.500435
+  |||φ|||² = 1.000000
+  c_H = E[||f_φ||²] / |||φ|||² = 0.500435
+
+d=1, N=10:
+  E[||f_φ||²] = 0.406859
+  |||φ|||² = 1.000000
+  c_H = E[||f_φ||²] / |||φ|||² = 0.406859
+
+d=1, N=20:
+  E[||f_φ||²] = 0.367725
+  |||φ|||² = 1.000000
+  c_H = E[||f_φ||²] / |||φ|||² = 0.367725
+
+
+======================================================================
+SECTION 4: MEAN-FIELD LIMIT (N → ∞)
+======================================================================
+
+In the mean-field limit N → ∞, the empirical measure μ_N converges to 
+a deterministic measure μ. The drift becomes:
+
+  f_φ(x) = ∫ φ(|y-x|)(y-x) μ(dy)
+
+For Gaussian μ = N(0, I_d):
+  
+  f_φ(x) = E_Y[φ(|Y-x|)(Y-x)] where Y ~ N(0, I_d)
+
+Let's compute this for x = 0 and φ(r) = 1/r:
+
+  f_φ(0) = E_Y[Y/|Y|] = 0 by symmetry!
+
+This means in the mean-field limit with symmetric distribution,
+the drift at the center is zero!
+
+The coercivity in mean-field limit depends on the second moment:
+  E[||f_φ(X)||²] where X ~ μ
+
+Mean-field limit, d=1:
+  E[||f_φ(X)||²] = 0.315958
+  This should be O(1/n_Y) = 0.001000 due to CLT
+
+Mean-field limit, d=2:
+  E[||f_φ(X)||²] = 0.398527
+  This should be O(1/n_Y) = 0.001000 due to CLT
+
+Mean-field limit, d=3:
+  E[||f_φ(X)||²] = 0.435815
+  This should be O(1/n_Y) = 0.001000 due to CLT
+
+
+======================================================================
+SECTION 5: CORRECT COERCIVITY INTERPRETATION
+======================================================================
+
+KEY INSIGHT: The coercivity constant c_H depends on:
+1. The hypothesis space H
+2. The distribution ρ_T of pairwise distances
+3. The number of particles N (finite particle systems)
+
+For FINITE N with iid initial conditions:
+- The coercivity c_H scales like (N-1)/N² for large N
+- This is because E[||f_φ||²] ~ (N-1)/N² * E[|φ(r)r|²]
+
+For the trajectory-based loss (Fei Lu's setup):
+- Data comes from trajectories, not just t=0
+- The measure ρ_T aggregates over time [0,T]
+- Ergodicity of the relative position system is crucial!
+
+The coercivity constants 0.48, 0.87, 0.73 in our theory file
+are NOT from Fei Lu's paper - they need to be recomputed
+based on the specific setup!
+
+
+======================================================================
+SECTION 6: CONVERGENCE RATE VERIFICATION
+======================================================================
+
+From Fei Lu's paper, the convergence rate is:
+
+Continuous-time observations:
+  |||φ̂ - φ|||² ≲ (1/c_H²) · (log M / M)^{2s/(2s+1)}
+
+where:
+- M = number of trajectories
+- s = Hölder smoothness of φ
+- c_H = coercivity constant
+
+Discrete-time observations:
+  |||φ̂ - φ||| ≤ |||φ̂_{∞} - φ||| + C(√(n/M) + √Δt)
+
+where:
+- Δt = observation time gap
+- n = dimension of hypothesis space
+
+The rate 2s/(2s+1) is the MINIMAX OPTIMAL rate for 1D nonparametric
+regression! This is because we learn φ(r)r as a function of r ∈ R+.
+
+OUR THEOREM 4 claimed rate n^{-2(s-1)/(2s+d)} which is DIFFERENT!
+- Fei Lu: rate in M (number of trajectories)
+- Our claim: rate in n (sample size)
+- These are measuring different things!
+
+
+Rate comparison (for gradient estimation):
+  Fei Lu (function estimation):  2s/(2s+1)
+  Standard 1D regression:        2s/(2s+1)
+  Our theorem (wrong):           2(s-1)/(2s+d)
+  Our theorem (corrected):       2(s-1)/(2s+d-2)
+
+Numerical comparison (s=2):
+  d=1: Fei Lu = 0.8000, wrong = 0.4000, corrected = 0.6667
+  d=2: Fei Lu = 0.8000, wrong = 0.3333, corrected = 0.5000
+  d=3: Fei Lu = 0.8000, wrong = 0.2857, corrected = 0.4000
+
+======================================================================
+SECTION 7: SUMMARY OF FINDINGS
+======================================================================
+
+✅ VERIFIED:
+1. System setup and notation match Fei Lu's paper
+2. The norm |||φ||| = ||φ(·)·||_{L²(ρ_T)} is correct
+3. Coercivity ensures identifiability via positive definiteness
+4. Convergence rate 2s/(2s+1) is minimax optimal for 1D
+
+❌ ISSUES IN OUR THEORY:
+1. Coercivity constants (0.48, 0.87, 0.73) - source unclear
+2. Minimax rate exponent - mismatch between theorem and proof
+3. Conditional independence assumption - needs mean-field or t=0
+
+⚠️ NEEDS CLARIFICATION:
+1. Our loss function vs. Fei Lu's MLE - are they equivalent?
+2. Our setup: learning both V and Φ vs. Fei Lu: learning only φ
+3. Trajectory-free vs. trajectory-based learning
+
+📝 RECOMMENDATIONS:
+1. Use Fei Lu's coercivity definition explicitly
+2. Clarify the relationship between our loss and MLE
+3. Either prove new coercivity bounds or cite properly
+
