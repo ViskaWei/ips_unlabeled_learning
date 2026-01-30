@@ -7,15 +7,16 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 ## 🐼 泡泡的设置
 
 ### Telegram
-- **我的 bot**: @Vikalaka_bot (显示名: Lakavika Math Bot)
+- **我的 bot**: @Vikalaka2_bot (显示名: 大胖熊Laka)
 - **账户 ID**: `ips`
 - **IPS 研究群 ID**: `-1003762629611`
 - **群里权限**: 可以看到所有消息（不需要 @）
 
-### 小胖熊 Vika (主管)
-- **Bot**: @Vikalaka2_bot (大胖熊Laka)
+### 小胖熊 Vika (主管) - 本地端
+- **Bot**: @Vikalaka_bot (Lakavika Math Bot)
 - **账户 ID**: `default`
-- **职责**: 跟卢飞教授沟通，转达指导
+- **职责**: 本地编译、跟卢飞教授沟通
+- **能力**: 有 LaTeX 环境，可以编译 PDF
 
 ### 服务器
 - **位置**: volta04.idies.jhu.edu
