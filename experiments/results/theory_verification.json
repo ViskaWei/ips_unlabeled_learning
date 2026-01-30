@@ -1,0 +1,55 @@
+{
+  "experiment_1_loss_landscape": {
+    "a_opt_mse": 0.3,
+    "a_opt_energy": 1.7,
+    "a_true": 1.0
+  },
+  "experiment_2_consistency": {
+    "n_values": [
+      200,
+      400,
+      800,
+      1600,
+      3200
+    ],
+    "errors": [
+      0.4,
+      0.4,
+      0.4,
+      0.4,
+      0.4
+    ],
+    "rate": 8.60389762460288e-17
+  },
+  "experiment_3_convergence_rate": {
+    "n_values": [
+      200,
+      400,
+      800,
+      1600,
+      3200
+    ],
+    "mse": [
+      0.09000000000000002,
+      0.09000000000000002,
+      0.09000000000000002,
+      0.09000000000000002,
+      0.09000000000000002
+    ],
+    "rate": 2.965417437336669e-17
+  },
+  "experiment_4_coercivity": {
+    "1": {
+      "empirical": 1.7187117093911914,
+      "theory_lower": 0.48
+    },
+    "2": {
+      "empirical": 1.9857138003397063,
+      "theory_lower": 0.87
+    },
+    "3": {
+      "empirical": 2.1334031623969665,
+      "theory_lower": 0.73
+    }
+  }
+}

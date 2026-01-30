@@ -235,8 +235,7 @@ def compute_normal_matrix_and_vector(
     for i in range(n_basis):
         Phi_vals[:, i] = integrate.cumulative_trapezoid(phi_vals[:, i], r_grid, initial=0)
 
-    # Compute derivatives of basis (for divergence term)
-    dphi_vals = evaluate_basis_derivative(basis_funcs, r_grid, order=1)  # (M_grid, n_basis)
+    # Note: We no longer need dphi_vals for b vector computation
 
     # Time loop
     for ell in range(L - 1):
@@ -279,20 +278,11 @@ def compute_normal_matrix_and_vector(
                     Phi_val = Phi_vals[r_idx, i] if r_idx < M_grid else 0.0
                     Phi_i_conv_u[m] += Phi_val * u_curr[n] * dx
 
-            # Compute div(K_phi_i) * u = dphi_i(|x-y|) * u(y)
-            # For 1D: div(K_phi) = d/dx [phi(|x|) * sign(x)] = phi'(|x|)
-            div_K_phi_i_conv_u = np.zeros(M_grid)
-            for m, x in enumerate(x_grid):
-                for n, y in enumerate(x_grid):
-                    r = abs(x - y)
-                    r_idx = min(int(r / dr), M_grid - 1)
-                    dphi_val = dphi_vals[r_idx, i] if r_idx < M_grid else 0.0
-                    div_K_phi_i_conv_u[m] += dphi_val * u_curr[n] * dx
-
             # b_i contribution (Eq 2.18)
-            # b_i = -1/T sum_l sum_m [du_dt * Phi_i*u + nu * u * div(K_phi_i)*u] dx dt
+            # b_i = -1/T sum_l sum_m [du_dt * Phi_i*u + nu * ∇u · (K_phi_i*u)] dx dt
+            # Note: ∇u · (K_φ*u) = (du/dx) * (K_φ*u) in 1D
             term1 = np.sum(du_dt * Phi_i_conv_u) * dx
-            term2 = nu * np.sum(u_curr * div_K_phi_i_conv_u) * dx
+            term2 = nu * np.sum(du_dx * K_phi_i) * dx  # Fixed: was computing u*(div*u), should be ∇u·(K*u)
             b[i] -= (term1 + term2) * dt / T
 
             for j in range(i, n_basis):

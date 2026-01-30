@@ -10,7 +10,7 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 - **我的 bot**: @Vikalaka_bot (显示名: Lakavika Math Bot)
 - **账户 ID**: `ips`
 - **IPS 研究群 ID**: `-1003762629611`
-- **⚠️ 群里找 bot 必须 @**: 在 Telegram 群里，要让 bot 收到消息必须 `@Vikalaka_bot`
+- **群里权限**: 可以看到所有消息（不需要 @）
 
 ### 小胖熊 Vika (主管)
 - **Bot**: @Vikalaka2_bot (大胖熊Laka)
